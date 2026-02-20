@@ -14,6 +14,8 @@ use basics::types::greet;
 use basics::functions::print_coordinates;
 use basics::functions::is_divisible;
 use basics::functions::celsius_to_fahrenheit;
+use basics::ownership::string_ownership;
+
 
 // Условные операторы
 use basics::conditionals::if_let_example_1;
@@ -47,5 +49,9 @@ fn main() {
     // loop_example();
     // matrix_search();
     show_progress(5, 15);
+    
+    /*** Владение ***/
+    string_ownership();
+
 
 }
