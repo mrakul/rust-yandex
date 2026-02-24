@@ -44,6 +44,9 @@ use basics::output::{*};
 // Замыкания (closures) и fn-трейты
 use basics::closures::{*};
 
+// Обработка ошибок
+use basics::errors_processing::{*};
+
 fn main() {
 
     // // Примеры вывода
@@ -112,6 +115,61 @@ fn main() {
     // borrow_move_closure();
     // calculate_differently();
     // generic_functor();
-    adders_creation();
+    // adders_creation();
 
-} 
+    /*** Обработка ошибок ***/
+
+    // Примеры c Option
+    find_long_word_example();
+
+    option_match_check();
+
+    option_if_let_check();
+    option_if_let_none_check();
+
+    option_unwrap();
+    option_unwrap_expect();
+
+    option_let_else_check();
+
+    // Задание
+    first_even_check();
+
+    // Примеры с Result
+    divide_result_example();
+    result_match_example();
+    result_if_let_example();
+
+    let result = parse_number("abc");
+    println!("{:?}", result);  
+    // Вывод, отладочный из-за {:?}: "Err(ParseIntError { kind: InvalidDigit })"
+
+    // Практическое задание #2
+    save_divide_example();
+
+    // Оператор ?: синтаксический сахар для обработки ошибок
+
+    let mut file_path = "/home/m_rakul/Code/RustYandex/yandex_course/aux/text.txt";
+
+    let mut read_result = read_file(file_path);
+
+    match read_result {
+        Err(error) => println!("Файл не прочитан. {}", error),
+        Ok(value) => println!("Контент файла: {}", value),
+    }
+
+    file_path = "/home/m_rakul/Code/RustYandex/yandex_course/aux/not_exists.txt";
+
+    read_result = read_file(file_path);
+
+    match read_result {
+        Err(error) => println!("Файл не прочитан. {}", error),
+        Ok(value) => println!("Контент файла: {}", value),
+    }
+
+    // Самый простой вариант
+    // println!("Контент файла: {}", read_result.unwrap());
+    
+
+}
+ 

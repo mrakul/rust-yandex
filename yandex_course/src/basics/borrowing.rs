@@ -23,6 +23,31 @@ pub fn borrowing_example () {
     // let s2 = move_string();
 }
 
+
+// ❌ Common Misconception
+// "The owner and mutable reference can both exist, but only one can modify at a time"
+// ❌ Wrong. The owner cannot even read while a mutable reference exists. This is exclusive access, not shared access with restrictions.
+fn borrowing_mut_example() {
+    let mut data = String::from("hello");    // Owner has full access
+    
+    {
+        let rw = &mut data;  // ← Mutable borrow STARTS
+                                          //   Owner `data` is NOW FROZEN
+        
+        rw.push_str("!");    // ✅ ONLY rw can mutate
+        println!("{}", rw);         // ✅ ONLY rw can read
+        
+        // data.push_str("?");  // ❌ ERROR: cannot borrow `data` as mutable
+                                //    because it is also borrowed as mutable
+        // println!("{}", data); // ❌ ERROR: cannot borrow `data` as immutable
+                                //    because it is also borrowed as mutable
+    }  // ← Mutable borrow ENDS here (rw dropped)
+    
+    data.push_str("?");  // ✅ Owner regains full access
+    println!("{}", data);  // Works: "hello!?"
+}
+
+
 fn change(s: &mut String) {
     s.push_str(" Практикум");
 

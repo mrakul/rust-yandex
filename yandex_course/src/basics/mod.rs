@@ -9,3 +9,4 @@ pub mod borrowing;
 pub mod generics_traits;
 pub mod output;
 pub mod closures;
+pub mod errors_processing;
