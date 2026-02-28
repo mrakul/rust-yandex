@@ -47,6 +47,10 @@ use basics::closures::{*};
 // Обработка ошибок
 use basics::errors_processing::{*};
 
+use basics::errors_processing_best_practices::{*};
+
+use std::error::Error;
+
 fn main() {
 
     // // Примеры вывода
@@ -128,7 +132,7 @@ fn main() {
     option_if_let_none_check();
 
     option_unwrap();
-    option_unwrap_expect();
+    option_expect();
 
     option_let_else_check();
 
@@ -170,6 +174,160 @@ fn main() {
     // Самый простой вариант
     // println!("Контент файла: {}", read_result.unwrap());
     
+    /*** Обработка ошибок, Best Practices ***/
 
+    // Method          Processes Ok?       Explanation
+    // map             ✅ Yes              Applies function to Ok value, returns Result<U, E>
+    // map_err         ❌ No               Applies function to Err value (processes errors)
+    // and_then        ✅                  Yes Applies function to Ok value, function returns Result (chaining)
+    // or_else         ❌                  No Applies function to Err value (error recovery)
+    // unwrap_or       ❌                  No Extracts value or provides default (not transformation)
+
+    println!("Parsed and double {}", parse_and_double_map("34").unwrap());
+    // panic!, поскольку берём только успешный результат
+    // println!("Parsed and double {}", parse_and_double_map("abc").unwrap());  
+
+    println!("Parsed and double {}", parse_number_map_err("50").unwrap());
+    // panic!, поскольку unwrap() применяется для Ok успешно (❌.unwrap() on Err always panics)
+    // println!("Parsed and double {}", parse_number_map_err("abc").unwrap());    
+    
+    println!("Parsed and double {}", parse_and_sqrt_map_err_and_then("50").unwrap());
+    // Если parse успешный → вызываем square_root.
+    // Если ошибка → она передаётся дальше, то есть не предполагается вызов unwrap()
+    // println!("Parsed and double {}", parse_and_sqrt_map_err_and_then("abc").unwrap());    
+    
+    println!("PORT: {}", get_env_var_unwrap_or("PORT"));        // Для примера можно сделать "export PORT=100"
+    println!("PORT: {}", get_env_var_unwrap_or("NOT_EXISTING_ENV_VAR"));    
+
+    /*** Цепочки значений с ошибками/ ***/
+    match parse_str_get_root_and_x10("Это не число") {
+        Ok(result) => {println!("Корень * 10: {}", result);}
+        Err(error) => {println!("{}", error);}
+    };
+
+    // Создание временных векторов
+    let _unused_result = process_vec(vec!["Test", "Lane", "Boom-boom"]);
+    let _unused_result =process_vec(Vec::from(["Test", "Lane", "Boom-boom"]));
+    let _unused_result =process_vec(["Test", "Lane", "Boom-boom"].to_vec());
+
+    // Пример с вектором
+    let nums = vec!["9.0", "4.0", "16.0", "4.0"];
+
+    // Попробуем преобразовать всё в Vec<f64>
+    match process_vec(nums) {
+        Ok(results) => println!("Результаты: {:?}", results),
+        Err(err) => println!("Ошибка: {}", err),
+    }
+    // Результаты: [30.0, 20.0, 40.0, 20.0]
+
+    let nums = vec!["9.0", "4.0", "-16.0", "4.0"];
+
+    // Попробуем преобразовать всё в Vec<f64>
+    match process_vec(nums) {
+        Ok(results) => println!("Результаты: {:?}", results),
+        Err(err) => println!("Ошибка: {}", err),
+    }
+
+    // Практическое задание
+    assert_eq!(get_port_config(Some("3000".to_string())), 3000);
+    assert_eq!(get_port_config(Some("abc".to_string())), 8080);
+    assert_eq!(get_port_config(None), 8080);
+    println!("Тесты прошли");
+
+    /*** panic! */
+    let config = load_game_config("./aux/game_config.txt")
+        .expect("Конфигурация игры не найдена, программа не может продолжить!");
+    
+    println!("Конфиг загружен: {}", config);
+    // Если нет файла настроек, то .expect() вызовет panic!
+
+    /*** Трейт Error ***/
+    // Использование, более сложный пример реализация трейта Display и Error
+    match load_config("./aux/app.conf") {
+        Ok(config) => {
+            println!("Конфиг загружен: {:?}", config);
+        }
+        Err(err) => {
+            eprintln!("Ошибка: {}", err);
+            
+            // Показываем цепочку ошибок
+            let mut source = err.source();
+            while let Some(err) = source {
+                eprintln!("  Вызвано: {}", err);
+                source = err.source();
+            }
+        }
+    }
+
+    // Практическое задание #2
+    // Реализуйте Display и Error
+    let err = AuthError::UserNotFound("john".to_string());
+    assert_eq!(err.to_string(), "Пользователь john не найден");
+    
+    let err = AuthError::InvalidPassword;
+    assert_eq!(err.to_string(), "Неверный пароль");
+    
+    let err = AuthError::TokenExpired;
+    assert_eq!(err.to_string(), "Токен истёк");
+    
+    println!("Тесты прошли");
+
+    /*** Трейты From и Into ***/
+    let data = vec!["10", "20", "oops", "40"];
+
+    match read_number_from_vec(data.clone(), 1) {
+        Ok(n) => println!("Нашли число: {}", n),
+        Err(e) => println!("Ошибка: {}", e),
+    }
+
+    match read_number_from_vec(data.clone(), 2) {
+        Ok(n) => println!("Нашли число: {}", n),
+        Err(e) => println!("Ошибка: {}", e),
+    }
+
+    match read_number_from_vec(data.clone(), 10) {
+        Ok(n) => println!("Нашли число: {}", n),
+        Err(e) => println!("Ошибка: {}", e),
+    }
+
+    /*** Итоговое задание по обработкам ошибок ***/
+    
+    println!(">>> Создание пользователей <<<");
+
+    // 1. Успешное создание пользователя
+    match create_user("user@test.com", "password123", 25) {
+        Ok(user) => println!("Пользователь создан: {:?}", user),
+        Err(e) => println!("Ошибка: {:?}", e),
+    }
+    
+    // 2. Обработка конкретных ошибок
+    match create_user("abc", "123", 16) {
+        Ok(user) => println!("Пользователь создан: {:?}", user),
+        Err(ValidationError::EmailTooShort) => println!("Не создан: e-mail слишком короткий!"),
+        Err(ValidationError::EmailMissingAt) => println!("В e-mail отсутствует @"),
+        Err(ValidationError::PasswordTooShort) => println!("Пароль слишком короткий!"),
+        Err(ValidationError::AgeTooYoung) => println!("Пользователь слишком молод!"),
+    }
+    
+    // 3. Игнорирование ошибок (не рекомендуется, но возможно)
+    if let Ok(user) = create_user("admin@site.com", "securepass", 30) {
+        println!("Администратор создан: {:?}", user);
+    }
+    
+    // 4. Использование unwrap_or для значения по умолчанию
+    let default_age = validate_age(15).unwrap_or(18);
+    println!("Возраст: {}", default_age);
+    
+    // Тесты
+    assert_eq!(validate_email("ab"), Err(ValidationError::EmailTooShort));
+    assert_eq!(validate_email("test.com"), Err(ValidationError::EmailMissingAt));
+    assert_eq!(validate_email("user@test.com"), Ok("user@test.com".to_string()));
+    
+    assert_eq!(validate_password("1234567"), Err(ValidationError::PasswordTooShort));
+    assert_eq!(validate_password("password123"), Ok("password123".to_string()));
+    
+    assert_eq!(validate_age(17), Err(ValidationError::AgeTooYoung));
+    assert_eq!(validate_age(25), Ok(25));
+    
+    println!("Все тесты прошли! Поздравляем!");
 }
- 
