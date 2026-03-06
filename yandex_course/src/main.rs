@@ -52,6 +52,14 @@ use std::error::Error;
 // Умные указатели
 use basics::smart_pointers::{*};
 
+// Коллекции
+use basics::collections::{*};
+
+// Итераторы
+use basics::collections::{*};
+
+use crate::basics::iterators::iterators_example;
+
 fn main() {
 
     // // Примеры вывода
@@ -333,13 +341,42 @@ fn main() {
     // println!("Все тесты прошли! Поздравляем!");
 
     /*** Умные указатели ***/
-    box_using();
-    // list_pointers();
-    rc_using();
 
-    // RefCell
-    ref_cell_example();
-    ref_cell_panic();
-    ref_cell_add_value();
-    rc_refcell_example();
+    // box_using();
+    // // list_pointers();
+    // rc_using();
+
+    // // RefCell
+    // ref_cell_example();
+    // ref_cell_panic();
+    // ref_cell_add_value();
+    // rc_refcell_example();
+
+    /*** Коллекции ***/
+
+    // 1.  Vec / VecDeque
+    // vec_example();
+    // vec_deq_example();
+
+    // 2. BTreeSet
+    // btreeset_example();
+
+    // // 3. BTreeMap
+    // btreemap_example();
+
+    // // 4. String
+    // string_example();
+
+    // // 5. HashSet, HashMap
+    // hashset_example();
+
+    // // 6. BinaryHeap
+    // binaryheap_example();
+
+    // // Практическое задание
+    // anagrammes();
+
+    /*** Итераторы ***/
+    iterators_example();
+
 }

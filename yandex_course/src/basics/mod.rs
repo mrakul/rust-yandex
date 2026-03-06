@@ -12,3 +12,5 @@ pub mod closures;
 pub mod errors_processing;
 pub mod errors_processing_best_practices;
 pub mod smart_pointers;
+pub mod collections;
+pub mod iterators;
