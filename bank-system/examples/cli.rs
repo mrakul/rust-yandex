@@ -100,7 +100,7 @@ fn main() {
             let user = &args[2];
 
             match storage.get_balance(user) {
-                Some(balance) => println!("Баланс {}: {}", user, balance),
+                Some(balance) => println!("Баланс {}: {:?}", user, balance),
                 None => println!("Пользователь {} не найден", user),
             }
         }

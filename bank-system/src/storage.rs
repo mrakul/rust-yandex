@@ -6,13 +6,15 @@ use std::fs;
 
 // Задаём тип (аналог using C++)
 pub type Name = String;
-pub type Balance = i64;
-// Сейчас сделали struct Balance(i64) с методами
+// pub type Balance = i64;
+// Сейчас сделали struct Balance(i6 4) с методами
 
 // Обернём баланс в новый тип, чтобы можно было реализовывать метод
 // (не для целого числа ведь метод добавлять, верно? :) )
 // и запретим балансу опускаться ниже нуля
-// pubstruct Balance(i64);
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Balance(i64);
 
 // Хранилище
 pub struct Storage {
@@ -24,7 +26,7 @@ pub struct Storage {
 pub enum Operation {
     Deposit(u32),
     Withdraw(u32),
-    CloseAccount(String)
+    CloseAccount
 } 
 
 
@@ -47,8 +49,8 @@ impl Storage {
             // (интересно, cargo clippy тоже об этом сказал)
 
             // (!) Добавляем, передавая владение
-            self.accounts.insert(user_to_add, 0);
-            Some(0)
+            self.accounts.insert(user_to_add, Balance(0));
+            Some(Balance(0))
         }
     }
 
@@ -71,7 +73,7 @@ impl Storage {
         // Деструктуризация в Some<&mut i64>, возвращаем как &str - указатель на литерал (можно сделать String как Result)
         if let Some(balance) = self.accounts.get_mut(user.as_str()) {
             // Добавили с разымёныванием
-            *balance += money_to_add;
+            balance.0 += money_to_add;
             Ok(())
         }
         else {
@@ -79,15 +81,15 @@ impl Storage {
         }
     }
 
-    pub fn withdraw(&mut self, user: &Name, money_to_withdraw: Balance) -> Result<(), &str> {
+    pub fn withdraw(&mut self, user: &Name, money_to_withdraw: i64) -> Result<(), &str> {
         // Деструктуризация в Some<&mut i64>
         if let Some(balance) = self.accounts.get_mut(user) {
-            if *balance - money_to_withdraw < 0 {
+            if balance.0 - money_to_withdraw < 0 {
                 Err("Недостаточно средств")
             }
             else {
                 // Изымаем
-                *balance -= money_to_withdraw;
+                balance.0 -= money_to_withdraw;
                 Ok(())                
             }
         }
@@ -98,10 +100,10 @@ impl Storage {
     }    
 
 
-    pub fn get_all(&self) -> Vec<(Name, i64)> {
+    pub fn get_all(&self) -> Vec<(Name, Balance)> {
         // Получить все значения в виде вектора: String клонируется, balance читается по ссылке
         // (и автоматом копируется). И собирается .collect()'ом в вектор при возврате
-        self.accounts.iter().map(|(name, balance)| (name.clone(), *balance)).collect()
+        self.accounts.iter().map(|(name, balance)| (name.clone(), balance.clone())).collect()
     }
 
     /// Загружает данные из CSV-файла или создаёт хранилище с дефолтными пользователями
@@ -156,7 +158,7 @@ impl Storage {
         // Бежим по вектору
         for (name, balance) in self.get_all() {
             // Разделяем newline'ом записи, всё по классике
-            data.push_str(&format!("{},{}\n", name, balance));
+            data.push_str(&format!("{},{}\n", name, balance.0));
         }
 
         // Записываем в файл
@@ -203,6 +205,128 @@ impl Storage {
 
 }
 
+impl Balance {
+    // Конструктор, возвращем структуру Storage (by value, Move-семантика)
+    pub fn new(value: i64) -> Self {
+        Self(value)
+    }
+    
+    // Опционально: можно пойти ещё дальше и в качестве аргумента принимать любой тип,
+    // который может итерироваться по OpKind, с помощью дженерика:
+    // fn process<'a>(&mut self, impl IntoIterator<Item=&'a OpKind>) -> Vec<&'a OpKind>
+    
+    // Реализация из курса
+    // fn process<'a>(&mut self, ops: &[&'a OpKind]) -> Vec<&'a OpKind> {
+    pub fn process_operations(&mut self, operations: Vec<Operation>) -> Vec<Operation> {
+        
+        // Владение вектором в начале операции, передаём владение в итератор remaining
+        let mut remaining_operations = operations.into_iter();
+        let mut bad_operations = Vec::new();
+
+        // Необходимо взять итератор по ссылке, чтобы он был доступен в конце для сохранения оставшихся
+        for op in remaining_operations.by_ref() {
+            match op {
+                Operation::Deposit(value) => {
+                    self.0 += value as i64;
+                },
+                Operation::Withdraw(value) if self.0 >= value as i64 => {
+                    self.0 -= value as i64;
+                },
+                other @ _ => {
+                    bad_operations.push(other);
+                    // Выходим сразу после первой плохой операции
+                    break;
+                },
+            }
+        }
+
+        // В extend() передаём именно итератор, оставшиеся операции
+        bad_operations.extend(remaining_operations);
+        bad_operations
+    }
+}
+
+
+
+/*** TODO: модуль аналитики ***/
+
+// 1. В Balance добавляется список проведённых операций
+
+// #[derive(Debug)]
+// struct Balance {
+//     result: u64,
+//     last_ops: Vec<OpKind>,
+// }
+
+// 2. find_best() - отношение пополнений к снятиям
+//    - Можно сделать как pub fn в storage
+//    - Разобраться с итератором в negative
+
+// fn find_best<'a>(storage: &'a Storage) -> Option<(&'a str, f32)> {
+//     if storage.accounts.is_empty() {
+//         return None;
+//     }
+//     let mut best_factor = f32::MIN;
+//     let mut best_name = "";
+//     for (name, balance) in &storage.accounts {
+//         let mut all_positive = 0;
+//         for op in &balance.last_ops {
+//             match op {
+//                 OpKind::Deposit(value) => all_positive += *value as u64,
+//                 _ => (),
+//             }
+//         }
+//         // почти то же самое на итераторах!
+//         let all_negative: u64
+//             = balance.last_ops.iter()
+//               .filter_map(
+//                   |op| match op {OpKind::Withdraw(value) => Some(*value as u64), _ => None}
+//                   )
+//               .sum();
+//         let factor = all_positive as f32 / all_negative as f32;
+//         if factor > best_factor {
+//             best_factor = factor;
+//             best_name = &name;
+//         }
+//     }
+//     Some((best_name, best_factor))
+// }
+
+// 3. В пример balance.rs
+
+// fn main () {
+//     let storage = Storage{accounts: [
+//         ( "Dad".to_string(),
+//           Balance{ result: 0,
+//                    last_ops: vec![ OpKind::Deposit(200000),
+//                                    OpKind::Withdraw(100000) ] } ),
+//         ( "Mom".to_string(),
+//           Balance{ result: 0,
+//                    last_ops: vec![ OpKind::Deposit(120000),
+//                                    OpKind::Withdraw(50000),
+//                                    OpKind::Withdraw(20000) ] } ),
+//         ( "Son".to_string(),
+//           Balance{ result: 0,
+//                    last_ops: vec![ OpKind::Deposit(5000),
+//                                    OpKind::Withdraw(500),
+//                                    OpKind::Withdraw(1000),
+//                                    OpKind::Withdraw(700) ] } ),
+//     ].into_iter().collect()};
+//     println!(r#"best factor for "{}"!"#, find_best(&storage).unwrap().0);
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*** Секция тестов ***/
 
 // Child-модуль
@@ -223,7 +347,7 @@ mod tests {
         let mut storage = Storage::new();
 
         // Проверка уже существующего пользователя
-        assert_eq!(storage.add_user("Alice".to_string()), Some(0)); // новый пользователь
+        assert_eq!(storage.add_user("Alice".to_string()), Some(Balance(0))); // новый пользователь
         assert_eq!(storage.add_user("Alice".to_string()), None);    // уже существует
     }
 
@@ -235,7 +359,7 @@ mod tests {
         storage.deposit(&"Bob".to_string(), 100).unwrap();
 
         // Проверка баланса до и после удаления пользователя
-        assert_eq!(storage.remove_user(&"Bob".to_string()), Some(100));
+        assert_eq!(storage.remove_user(&"Bob".to_string()), Some(Balance(100)));
         assert_eq!(storage.remove_user(&"Bob".to_string()), None); 
     }
 
@@ -246,16 +370,16 @@ mod tests {
 
         // Пополнение
         assert!(storage.deposit(&"Charlie".to_string(), 200).is_ok());
-        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&200));
+        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance(200)));
 
         // Успешное снятие
         assert!(storage.withdraw(&"Charlie".to_string(), 150).is_ok());
-        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&50));
+        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance(50)));
 
         // Ошибка: недостаточно средств
         assert!(storage.withdraw(&"Charlie".to_string(), 100).is_err());
         // Но 50 ещё имеется
-        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&50));
+        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance(50)));
     }
 
     #[test]
@@ -295,9 +419,9 @@ mod tests {
 
         let storage = Storage::load_file_to_storage(&file_path.as_str());     
 
-        assert_eq!(storage.get_balance(&"John".to_string()), Some(&100));
-        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&200));
-        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&50));
+        assert_eq!(storage.get_balance(&"John".to_string()), Some(&Balance(100)));
+        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&Balance(200)));
+        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&Balance(50)));
         // Пользователь Vasya не добавлен в файле, поэтому None
         assert_eq!(storage.get_balance(&"Vasya".to_string()), None);
 
@@ -389,9 +513,9 @@ mod tests {
             }
         }
 
-        assert_eq!(storage.get_balance(&"John".to_string()), Some(&100));
-        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&200));
-        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&50));
+        assert_eq!(storage.get_balance(&"John".to_string()), Some(&Balance(100)));
+        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&Balance(200)));
+        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&Balance(50)));
         assert_eq!(storage.get_balance(&"Vasya".to_string()), None);
     }
 
@@ -416,7 +540,7 @@ mod tests {
             let mut writer = BufWriter::new(&mut cursor);
             // Получение всех записей в векторе запись в буфер как в файл
             for (name, balance) in storage.get_all() {
-                writeln!(writer, "{},{}", name, balance).unwrap();
+                writeln!(writer, "{},{}", name, balance.0).unwrap();
             }
             
             writer.flush().unwrap();
@@ -432,31 +556,3 @@ mod tests {
     }
 
 }
-
-
-// impl Balance {
-//     // Можно пойти ещё дальше и в качестве аргумента принимать любой тип,
-//     // который может итерироваться по OpKind, с помощью дженерика:
-//     // fn process<'a>(&mut self, impl IntoIterator<Item=&'a OpKind>) -> Vec<&'a OpKind>
-//     // Пробуйте, дерзайте!
-//     fn process<'a>(&mut self, ops: &[&'a OpKind]) -> Vec<&'a OpKind> {
-//         let mut remaining = ops.into_iter();
-//         let mut bad_ops = Vec::new();
-//         for op in &mut remaining {
-//             match op {
-//                 OpKind::Deposit(value) => {
-//                     self.0 += *value as u64;
-//                 },
-//                 OpKind::Withdraw(value) if self.0 > *value as u64 => {
-//                     self.0 -= *value as u64;
-//                 },
-//                 other @ _ => {
-//                     bad_ops.push(*other);
-//                     break;
-//                 },
-//             }
-//         }
-//         bad_ops.extend(remaining);
-//         bad_ops
-//     }
-// }

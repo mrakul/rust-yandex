@@ -1,3 +1,6 @@
+/*** Важно: этот файл запустится с cargo run (по умолчанию), поскольку находится в папке ./bin ***/
+/*** (сама библиотека не может запускаться) ***/
+
 // use bank_system::balance::balance_manager::BalanceManager;
 // use bank_system::users::user_manager::UserManager;
 use bank_system::{Name, Storage};
@@ -116,7 +119,7 @@ fn main() {
                             }
                             let name = args[1].to_string();
                             match storage.get_balance(&name) {
-                                Some(b) => println!("Баланс {}: {}", name, b),
+                                Some(b) => println!("Баланс {}: {:?}", name, b),
                                 None => println!("Пользователь {} не найден", name),
                             }
             }
