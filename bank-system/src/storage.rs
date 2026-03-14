@@ -13,8 +13,14 @@ pub type Name = String;
 // (не для целого числа ведь метод добавлять, верно? :) )
 // и запретим балансу опускаться ниже нуля
 
+// #[derive(Debug, PartialEq, Clone)]
+// pub struct Balance(i64);
+ 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Balance(i64);
+pub struct Balance {
+    value: i64,
+    applied_operations: Vec<Operation>,
+}
 
 // Хранилище
 pub struct Storage {
@@ -22,10 +28,10 @@ pub struct Storage {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Operation {
-    Deposit(u32),
-    Withdraw(u32),
+    Deposit(u64),
+    Withdraw(u64),
     CloseAccount
 } 
 
@@ -38,21 +44,55 @@ impl Storage {
         }
     }
 
-    // Добавить пользователя: важно, что передаём user'а с передачей владения для .insert()
-    pub fn add_user(&mut self, user_to_add: Name) -> Option<Balance> {
-        
-        // Важно: передаём по ссылке
+    /* Предыдущая реализация, неэффективная, два прохода
+    pub fn add_user_inefficient(&mut self, user_to_add: Name) -> Option<Balance> {
+        Важно: передаём по ссылке
         if self.accounts.contains_key(&user_to_add) {
             None
         } else {
-            // TODO: Второй проход (?). Использовать .entry() для одного прохода 
+                // TODO: Второй проход (?). Использовать .entry() для одного прохода 
             // (интересно, cargo clippy тоже об этом сказал)
-
+            
             // (!) Добавляем, передавая владение
-            self.accounts.insert(user_to_add, Balance(0));
-            Some(Balance(0))
+            self.accounts.insert(user_to_add, Balance::new());
+            Some(Balance::new())
+        }
+    } 
+    */
+    
+    // Добавить пользователя: важно, что передаём user'а с передачей владения для .insert()
+    // С одним проходом => .entry()
+    pub fn add_user(&mut self, user_to_add: Name) -> Option<Balance> {
+
+        match self.accounts.entry(user_to_add) {
+
+            std::collections::hash_map::Entry::Occupied(_) => None,
+            
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                let new_balance = Balance::new();     
+                entry.insert(new_balance.clone());
+                Some(new_balance)
+                // Не очень, что копируем: можно пересмотреть API: возвращать bool или Option<&Balance>
+                // Entry::Vacant(entry) => Some(entry.insert(Balance::new()))
+            }
         }
     }
+
+    pub fn add_user_with_balance(&mut self, user_to_add: Name, balance_to_add: Balance) -> Option<Balance> {
+
+        match self.accounts.entry(user_to_add) {
+
+            std::collections::hash_map::Entry::Occupied(_) => None,
+            
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                entry.insert(balance_to_add.clone());
+                // Не очень, что копируем для возврата: можно пересмотреть API: возвращать bool или Option<&Balance>
+                Some(balance_to_add)
+                // Entry::Vacant(entry) => Some(entry.insert(Balance::new()))
+            }
+        }
+    }
+
 
     // Удалить пользователя: Option<i64> => "забираем" данные (Copy для примитивов)
     pub fn remove_user(&mut self, user_to_remove: &Name) -> Option<Balance> {
@@ -63,9 +103,9 @@ impl Storage {
     pub fn get_balance(&self, user_to_read: &Name) -> Option<&Balance> {
         self.accounts.get(user_to_read)
         
-        // Можно так: тогда в Option<i64> и в тестах без ссылок, примитивы копируются.
-        //            Но get() возвращает immutable-ссылку, поэтому копируем
-        // self.accounts.get(user_to_read).copied()
+        // Можно так: тогда в Option<Balance> и в тестах без ссылок, примитивы копируются.
+        // Но get() возвращает immutable-ссылку, поэтому тогда копируем:
+        //  self.accounts.get(user_to_read).copied()
     }
 
     // Положить деньги, здесь можем передать user как ссылку
@@ -73,7 +113,7 @@ impl Storage {
         // Деструктуризация в Some<&mut i64>, возвращаем как &str - указатель на литерал (можно сделать String как Result)
         if let Some(balance) = self.accounts.get_mut(user.as_str()) {
             // Добавили с разымёныванием
-            balance.0 += money_to_add;
+            balance.value += money_to_add;
             Ok(())
         }
         else {
@@ -84,12 +124,12 @@ impl Storage {
     pub fn withdraw(&mut self, user: &Name, money_to_withdraw: i64) -> Result<(), &str> {
         // Деструктуризация в Some<&mut i64>
         if let Some(balance) = self.accounts.get_mut(user) {
-            if balance.0 - money_to_withdraw < 0 {
+            if balance.value - money_to_withdraw < 0 {
                 Err("Недостаточно средств")
             }
             else {
                 // Изымаем
-                balance.0 -= money_to_withdraw;
+                balance.value -= money_to_withdraw;
                 Ok(())                
             }
         }
@@ -158,7 +198,7 @@ impl Storage {
         // Бежим по вектору
         for (name, balance) in self.get_all() {
             // Разделяем newline'ом записи, всё по классике
-            data.push_str(&format!("{},{}\n", name, balance.0));
+            data.push_str(&format!("{},{}\n", name, balance.value));
         }
 
         // Записываем в файл
@@ -172,8 +212,50 @@ impl Storage {
         fs::write(file_path, data).expect("Не удалось записать файл");
     }
 
-    // pub pub fn apply_operations(&mut self, user: &Name, operations: &Vec<Operation>) -> Vec<Operation> {
+    pub fn find_best(&self) -> Option<(&str, f32)> {
+        // fn find_best<'a>(storage: &'a Storage) -> Option<(&'a str, f32)> {
         
+        if self.accounts.is_empty() {
+            return None;
+        }
+
+        let mut best_ratio = f32::MIN;
+        let mut best_name = "";
+        
+        // Идём по ссылкам аккаунтов: или &self.accounts, или self.accounts.iter()
+        for (cur_name, cur_balance) in self.accounts.iter() {
+            
+            let mut sum_deposit_value = 0;
+            
+            // Разумеется, можно за один проход проверить обе операции
+            for cur_operation in &cur_balance.applied_operations {
+                match cur_operation {
+                    &Operation::Deposit(value) => sum_deposit_value += value as i64,
+                    _ => (),
+                }
+            }
+
+            // Проход с помощью итераторов, тоже по ссылкам
+            let sum_withdraw_value: u64
+                = cur_balance.applied_operations.iter()
+                // Создаётся итератор, в котором отсеиваются только Withdraw
+                // Some(*value) возвращается замыканием, НО filter_map() unwrap()'ит автоматически
+                .filter_map(|op| match op {Operation::Withdraw(value) => Some(*value as u64), _ => None})
+                .sum();
+
+            let ratio = sum_deposit_value as f32 / sum_withdraw_value as f32;
+
+            if ratio > best_ratio {
+                best_ratio = ratio;
+                best_name = &cur_name;
+            }
+        }
+        
+        Some((best_name, best_ratio))
+    }
+
+
+    // pub pub fn apply_operations(&mut self, user: &Name, operations: &Vec<Operation>) -> Vec<Operation> {
     //     // Пустой вектор
     //     pub let mut bad_operations: Vec<Operation> = vec![];
 
@@ -206,17 +288,30 @@ impl Storage {
 }
 
 impl Balance {
-    // Конструктор, возвращем структуру Storage (by value, Move-семантика)
-    pub fn new(value: i64) -> Self {
-        Self(value)
+    // Предыдущий конструктор в tuple-like struct
+    // pub fn new(value: i64) -> Self {
+    //     Self(value)
+    // }
+    pub fn new() -> Self {
+            Balance{value: 0, applied_operations: Vec::new()}
     }
-    
+
+    pub fn new_value_and_operations(value_to_set: i64, operations: Vec<Operation>) -> Self {
+        Balance{value: value_to_set, 
+                applied_operations: operations}
+    }
+
+    // Или смотреть имплементацию From ниже
+    pub fn new_from_i64_value(value_to_set: i64) -> Self {
+            Balance{value: value_to_set, applied_operations: Vec::new()}
+    }
+
     // Опционально: можно пойти ещё дальше и в качестве аргумента принимать любой тип,
-    // который может итерироваться по OpKind, с помощью дженерика:
-    // fn process<'a>(&mut self, impl IntoIterator<Item=&'a OpKind>) -> Vec<&'a OpKind>
+    // который может итерироваться по Operation, с помощью дженерика:
+    // fn process<'a>(&mut self, impl IntoIterator<Item=&'a Operation>) -> Vec<&'a Operation>
     
     // Реализация из курса
-    // fn process<'a>(&mut self, ops: &[&'a OpKind]) -> Vec<&'a OpKind> {
+    // fn process<'a>(&mut self, ops: &[&'a Operation]) -> Vec<&'a Operation> {
     pub fn process_operations(&mut self, operations: Vec<Operation>) -> Vec<Operation> {
         
         // Владение вектором в начале операции, передаём владение в итератор remaining
@@ -227,14 +322,14 @@ impl Balance {
         for op in remaining_operations.by_ref() {
             match op {
                 Operation::Deposit(value) => {
-                    self.0 += value as i64;
+                    self.value += value as i64;
                 },
-                Operation::Withdraw(value) if self.0 >= value as i64 => {
-                    self.0 -= value as i64;
+                Operation::Withdraw(value) if self.value >= value as i64 => {
+                    self.value -= value as i64;
                 },
                 other @ _ => {
                     bad_operations.push(other);
-                    // Выходим сразу после первой плохой операции
+                    // Выходим сразу после первой плохой операции (итератор сразу после плохой операции)
                     break;
                 },
             }
@@ -246,83 +341,52 @@ impl Balance {
     }
 }
 
+// (!) Создаётся новый одновременно
+impl From<i64> for Balance {
+    fn from(value: i64) -> Self {
+        Balance{value, applied_operations: Vec::new() }
+    }
+}
 
+/*** Реализация Balance Manager Trait'а ***/
 
-/*** TODO: модуль аналитики ***/
+#[derive(Debug)]
+pub enum BalanceManagerError {
+    UserNotFound(Name),
+    NotEnoughMoney{required: i64, available: i64},
+}
 
-// 1. В Balance добавляется список проведённых операций
+pub trait BalanceManager {
+    fn deposit_by_manager(&mut self, name: &Name, amount: i64) -> Result<(), BalanceManagerError>;
+    fn withdraw_by_manager(&mut self, name: &Name, amount: i64) -> Result<(), BalanceManagerError>;
+}
 
-// #[derive(Debug)]
-// struct Balance {
-//     result: u64,
-//     last_ops: Vec<OpKind>,
-// }
+impl BalanceManager for Storage {
+    fn deposit_by_manager(&mut self, name: &Name, amount: i64) -> Result<(), BalanceManagerError> {
+        if let Some(balance) = self.accounts.get_mut(name) {
+            balance.value += amount;
+            Ok(())
+        } else {
+            // "Пользователь не найден".into()
+            Err(BalanceManagerError::UserNotFound(name.clone()))
+        }
+    }
 
-// 2. find_best() - отношение пополнений к снятиям
-//    - Можно сделать как pub fn в storage
-//    - Разобраться с итератором в negative
-
-// fn find_best<'a>(storage: &'a Storage) -> Option<(&'a str, f32)> {
-//     if storage.accounts.is_empty() {
-//         return None;
-//     }
-//     let mut best_factor = f32::MIN;
-//     let mut best_name = "";
-//     for (name, balance) in &storage.accounts {
-//         let mut all_positive = 0;
-//         for op in &balance.last_ops {
-//             match op {
-//                 OpKind::Deposit(value) => all_positive += *value as u64,
-//                 _ => (),
-//             }
-//         }
-//         // почти то же самое на итераторах!
-//         let all_negative: u64
-//             = balance.last_ops.iter()
-//               .filter_map(
-//                   |op| match op {OpKind::Withdraw(value) => Some(*value as u64), _ => None}
-//                   )
-//               .sum();
-//         let factor = all_positive as f32 / all_negative as f32;
-//         if factor > best_factor {
-//             best_factor = factor;
-//             best_name = &name;
-//         }
-//     }
-//     Some((best_name, best_factor))
-// }
-
-// 3. В пример balance.rs
-
-// fn main () {
-//     let storage = Storage{accounts: [
-//         ( "Dad".to_string(),
-//           Balance{ result: 0,
-//                    last_ops: vec![ OpKind::Deposit(200000),
-//                                    OpKind::Withdraw(100000) ] } ),
-//         ( "Mom".to_string(),
-//           Balance{ result: 0,
-//                    last_ops: vec![ OpKind::Deposit(120000),
-//                                    OpKind::Withdraw(50000),
-//                                    OpKind::Withdraw(20000) ] } ),
-//         ( "Son".to_string(),
-//           Balance{ result: 0,
-//                    last_ops: vec![ OpKind::Deposit(5000),
-//                                    OpKind::Withdraw(500),
-//                                    OpKind::Withdraw(1000),
-//                                    OpKind::Withdraw(700) ] } ),
-//     ].into_iter().collect()};
-//     println!(r#"best factor for "{}"!"#, find_best(&storage).unwrap().0);
-// }
-
-
-
-
-
-
-
-
-
+    fn withdraw_by_manager(&mut self, name: &Name, amount: i64) -> Result<(), BalanceManagerError> {
+        if let Some(balance) = self.accounts.get_mut(name) {
+            if balance.value >= amount {
+                balance.value -= amount;
+                Ok(())
+            } else {
+                // "Недостаточно средств".into()
+                Err(BalanceManagerError::NotEnoughMoney{required: amount, available: balance.value})
+            }
+        } else {
+            // "Пользователь не найден".into()
+            Err(BalanceManagerError::UserNotFound(name.clone()))
+        }
+    }
+}
 
 
 
@@ -347,7 +411,7 @@ mod tests {
         let mut storage = Storage::new();
 
         // Проверка уже существующего пользователя
-        assert_eq!(storage.add_user("Alice".to_string()), Some(Balance(0))); // новый пользователь
+        assert_eq!(storage.add_user("Alice".to_string()), Some(Balance::from(0))); // новый пользователь
         assert_eq!(storage.add_user("Alice".to_string()), None);    // уже существует
     }
 
@@ -359,7 +423,7 @@ mod tests {
         storage.deposit(&"Bob".to_string(), 100).unwrap();
 
         // Проверка баланса до и после удаления пользователя
-        assert_eq!(storage.remove_user(&"Bob".to_string()), Some(Balance(100)));
+        assert_eq!(storage.remove_user(&"Bob".to_string()), Some(Balance::from(100)));
         assert_eq!(storage.remove_user(&"Bob".to_string()), None); 
     }
 
@@ -370,16 +434,16 @@ mod tests {
 
         // Пополнение
         assert!(storage.deposit(&"Charlie".to_string(), 200).is_ok());
-        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance(200)));
+        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance::from(200)));
 
         // Успешное снятие
         assert!(storage.withdraw(&"Charlie".to_string(), 150).is_ok());
-        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance(50)));
+        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance::from(50)));
 
         // Ошибка: недостаточно средств
         assert!(storage.withdraw(&"Charlie".to_string(), 100).is_err());
         // Но 50 ещё имеется
-        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance(50)));
+        assert_eq!(storage.get_balance(&"Charlie".to_string()), Some(&Balance::from(50)));
     }
 
     #[test]
@@ -419,9 +483,9 @@ mod tests {
 
         let storage = Storage::load_file_to_storage(&file_path.as_str());     
 
-        assert_eq!(storage.get_balance(&"John".to_string()), Some(&Balance(100)));
-        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&Balance(200)));
-        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&Balance(50)));
+        assert_eq!(storage.get_balance(&"John".to_string()), Some(&Balance::from(100)));
+        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&Balance::from(200)));
+        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&Balance::from(50)));
         // Пользователь Vasya не добавлен в файле, поэтому None
         assert_eq!(storage.get_balance(&"Vasya".to_string()), None);
 
@@ -513,9 +577,9 @@ mod tests {
             }
         }
 
-        assert_eq!(storage.get_balance(&"John".to_string()), Some(&Balance(100)));
-        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&Balance(200)));
-        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&Balance(50)));
+        assert_eq!(storage.get_balance(&"John".to_string()), Some(&Balance::from(100)));
+        assert_eq!(storage.get_balance(&"Alice".to_string()), Some(&Balance::from(200)));
+        assert_eq!(storage.get_balance(&"Bob".to_string()), Some(&Balance::from(50)));
         assert_eq!(storage.get_balance(&"Vasya".to_string()), None);
     }
 
@@ -540,7 +604,7 @@ mod tests {
             let mut writer = BufWriter::new(&mut cursor);
             // Получение всех записей в векторе запись в буфер как в файл
             for (name, balance) in storage.get_all() {
-                writeln!(writer, "{},{}", name, balance.0).unwrap();
+                writeln!(writer, "{},{}", name, balance.value).unwrap();
             }
             
             writer.flush().unwrap();
