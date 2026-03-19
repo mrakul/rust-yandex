@@ -1,7 +1,13 @@
 /*** Транзакции: трейты и дженерики ***/
+/*
+*   В этом файле генерация имплементаций с помощью макросов из crate my_macros.
+*   Реализация вручную находится в transactions.rs
+*/
+
 
 use crate::storage::{*};
 use crate::balance::{*};
+use my_macros::Transaction;
 
 pub trait Transaction {
     fn apply(&self, storage: &mut Storage) -> Result<(), TxError>;
@@ -15,69 +21,30 @@ pub enum TxError {
 }
 
 // 1. Транзакция Deposit
+#[derive(Transaction)]
+// тут не нужно указывать #[transaction("deposit")], так как это значение по умолчанию
 pub struct Deposit {
-    // Get'теры, set'теры
     pub from_account: String,
     pub amount: i64,
 }
 
-impl Transaction for Deposit {    
-    fn apply(&self, storage: &mut Storage) -> Result<(), TxError> {
-        *storage.get_accounts_mut()
-            // За один проход: возвращает или Occupoed, or_insert() это unwrap'ит
-            // Или создаёт новый Balance. если нет записи
-            // AddAssign реализовал в Balance
-            .entry(self.from_account.clone())
-            .or_insert(Balance::from(0)) += self.amount;
-        
-        Ok(())
-    }
-}
-
-// 2. Транзакция Transfer
-pub struct Transfer {
-    pub from_account: String,
-    pub to_account: String,
-    pub amount: i64,
-}
-
-impl Transaction for Transfer {
-    fn apply(&self, storage: &mut Storage) -> Result<(), TxError> {
-        let from_balance = storage.get_accounts_mut().entry(self.from_account.clone()).or_insert(Balance::from(0));
-
-        if from_balance.get_value() < self.amount {
-            return Err(TxError::InsufficientFunds);
-        }
-
-        // SubAssign реализовал в Balance
-        *from_balance -= self.amount;
-
-        *storage.get_accounts_mut().entry(self.to_account.clone()).or_insert(Balance::from(0)) += self.amount;
-
-        Ok(())
-    }
-} 
-
-// 3. Транзакция Withdraw
+// 2. Транзакция Withdraw
+#[derive(Transaction)]
+#[transaction("withdraw")]
 pub struct Withdraw {
     pub from_account: String,
     pub amount: i64,
 }
 
-impl Transaction for Withdraw {    
-    fn apply(&self, storage: &mut Storage) -> Result<(), TxError> {
-        let from_balance = storage.get_accounts_mut().entry(self.from_account.clone()).or_insert(Balance::from(0));
+// 3. Транзакция Transfer
+#[derive(Transaction)]
+#[transaction("transfer")]
+pub struct Transfer {
+    pub from_account: String,
+    pub to_account: String,
+    pub amount: i64,
+} 
 
-        if from_balance.get_value() < self.amount {
-            return Err(TxError::InsufficientFunds);
-        }
-
-        // SubAssign реализовал в Balance
-        *from_balance -= self.amount;
-
-        Ok(())
-    }
-}
 
 // Переопределение "+"
 
@@ -174,7 +141,7 @@ macro_rules! tx_chain {
     ( $first:expr $(, $rest:expr )* $(,)? ) => {{
         let tx = $first;
         $(
-            let tx = $crate::transaction::TxCombinator{ t1: tx, t2: $rest };
+            let tx = $crate::transaction_macros::TxCombinator{ t1: tx, t2: $rest };
         )*
         tx
     }};

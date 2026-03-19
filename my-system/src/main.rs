@@ -1,7 +1,8 @@
 // Зависимость от библиотеки подключена в Cargo.toml с локальным путём к файлу
 
 // Резолвим имена
-use bank_system::storage::{Name, Balance};
+use bank_system::storage::{Name};
+use bank_system::balance::Balance;
 
 // Пример: поскольку pub use storage::Storage есть в lib.rs, можно не указывать полный путь
 use bank_system::Storage;

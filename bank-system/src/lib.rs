@@ -13,11 +13,13 @@
 pub mod storage;
 pub mod balance;
 pub mod operation;
-pub mod transaction;
+pub mod transaction_macros;
 
 // Так можно не указывать storage
 pub use storage::Storage;
 pub use storage::Name;
 pub use balance::Balance;
 pub use operation::Operation;
+pub use transaction_macros::{*};
+// pub use transaction::{*};
 pub use operation::Operation::{Deposit, Withdraw, CloseAccount};

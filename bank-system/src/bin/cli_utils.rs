@@ -5,12 +5,12 @@
 // use bank_system::balance::balance_manager::BalanceManager;
 // use bank_system::users::user_manager::UserManager;
 use bank_system::{Name, Storage};
-use bank_system::transaction::{Transaction, Deposit, Transfer, Withdraw};
+use bank_system::transaction_macros::{Transaction, Deposit, Transfer, Withdraw};
 use std::io::{self, BufRead, Write};
 
 fn main() {
 
-    let file_path = String::from("../../aux/balance.csv");
+    let file_path = String::from("/home/m_rakul/Code/RustYandex/bank-system/aux/balance.csv");
 
     let mut storage = Storage::load_file_to_storage(file_path.as_str());
 
