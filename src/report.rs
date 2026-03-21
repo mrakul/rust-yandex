@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
+use std::process::id;
 // use std::path::Path;
 // use std::fs::File;
 // use std::fs;
@@ -16,7 +17,8 @@ pub type ID = u64;
 enum TransactionType {
     Deposit,
     Withdrawal,
-    Transfer
+    Transfer,
+    Unknown
 }
 
 // Статус транзакции
@@ -24,50 +26,67 @@ enum TransactionType {
 enum TransactionStatus {
     Success,
     Failure,
-    Pending
+    Pending,
+    Unknown,
 }
 
 // Структура для чтения/записи транзакции
 #[derive(Debug)]
-struct Transaction {
-    tx_id: u64,
-    tx_type: TransactionType,
-    from_user_id: u64,
-    to_user_id: u64,
-    amount: u64,
-    timestamp: u64,
-    description: String,
+pub struct Transaction {
+    tx_id:          u64,
+    tx_type:        TransactionType,
+    from_user_id:   u64,
+    to_user_id:     u64,
+    amount:         u64,
+    timestamp:      u64,
+    status:         TransactionStatus,
+    description:    String,
 }
 
-// Реализуем трейты для ввода/вывода в различном формате
+// Конструктор из значений
+impl Transaction {
+    pub fn new(tx_id:        u64,
+               tx_type:      TransactionType,
+               from_user_id: u64,
+               to_user_id:   u64,
+               amount:       u64,
+               timestamp:    u64,
+               status:       TransactionStatus,
+               description:  String) -> Self 
+            {
+                Transaction {tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description}
+            }
+}
+
+// Хранение отчёта в виде вектора транзакций
 #[derive(Debug)]
 pub struct Report {
-   transactions: HashMap<ID, Transaction>
+    // Примечание: начал с HashMap, но, судя по всему, для поставленных задач проекта
+    // чтения/записи/сравнения подходит больше вектор
+    // transactions: HashMap<ID, Transaction>
+
+    transactions: Vec<Transaction>
 }
 
 impl Report {
     // Конструктор, возвращем структуру Report (by value, Move-семантика)
     pub fn new() -> Self {
         Self {
-            transactions: HashMap::new(),
+            transactions: Vec::new(),
         }
     }
     
-    // Добавить транзакцию: важно, что передаём с передачей владения для .insert()
+    // Добавить транзакцию (ДЛЯ HASHMAP): важно, что передаём с передачей владения для .insert()
     // С одним проходом => .entry()
     // pub fn add_transaction(&mut self, tx_to_add: Transaction) -> Option<&Transaction> {
-
     //     match self.transactions.entry(tx_to_add.tx_id) {
-            
     //         // TODO: маловероятно, можно обработать
     //         std::collections::hash_map::Entry::Occupied(occupied_entry) => {
     //             Some(occupied_entry.get_mut())
     //         },
-        
     //         std::collections::hash_map::Entry::Vacant(entry) => {
     //             // let added_transaction = Transaction::new();     
     //             let added_transaction = entry.insert(tx_to_add);
-                
     //             Some(added_transaction)
     //             // Не очень, что копируем: можно пересмотреть API: возвращать bool или Option<&Transaction>
     //             // Entry::Vacant(entry) => Some(entry.insert(Balance::new()))
@@ -75,22 +94,102 @@ impl Report {
     //     }
     // }
 
-    // Удалить транзакцию: Option<i64> => "забираем" данные (Copy для примитивов)
-    pub fn remove_transaction(&mut self, tx_id_to_remove: &ID) -> Option<Transaction> {
-        self.transactions.remove(tx_id_to_remove)
+    pub fn add_transaction(&mut self, tx_to_add: Transaction) -> () {
+        self.transactions.push(tx_to_add)
     }
 
+    // Удалить транзакцию (ДЛЯ HASHMAP): Option<i64> => "забираем" данные (Copy для примитивов)
+    // pub fn remove_transaction(&mut self, tx_id_to_remove: &ID) -> Option<Transaction> {
+    //     self.transactions.remove(tx_id_to_remove)
+    // }
+
+    pub fn get_transactions(&self) -> &Vec<Transaction> {
+        &self.transactions
+    }
+
+    pub fn get_transactions_mut(&mut self) -> &mut Vec<Transaction> {
+        &mut self.transactions
+    }
+
+    fn parse_u64_with_warning(in_str: &str, default_value: u64) -> u64 {
+        match in_str.parse::<u64>() {
+            Ok(parsed) => parsed,
+            Err(_) => {
+                eprintln!("Значение не распарсилось {}, устанавливается дефолтное {}", in_str, default_value);
+                default_value
+            }
+        }
+    }
+
+    // /// Загружает данные из CSV-файла или создаёт хранилище с дефолтными пользователями
+    // // (!) Важно, что функция не принимает &self
+    // pub fn load_file_to_storage(file_path: &str) -> Report {
+    //     let mut storage = Report::new();
+
+    //     // Проверяем, существует ли файл
+    //     if Path::new(file_path).exists() {
+    //         // Открываем файл
+    //         let file = File::open(file_path).unwrap();
+
+    //         // Оборачиваем файл в BufReader
+    //         // BufReader читает данные блоками и хранит их в буфере,
+    //         // поэтому построчное чтение (lines()) работает быстрее, чем читать по байту
+    //         let reader = BufReader::new(file);
+
+    //         // Читаем файл построчно
+    //         for cur_line in reader.lines() {
+    //             // Каждая строка — это Result<String>, поэтому делаем if let Ok
+    //             if let Ok(ok_line) = cur_line {
+    //                 // Разделяем строку по запятой: "Name,Balance"
+    //                 let columns: Vec<&str> = ok_line.trim().split(',').collect();
+
+    //                 // Если два столбца
+    //                 if columns.len() == 2 {
+    //                     let name = columns[0].to_string();
+    //                     // Пробуем преобразовать баланс из строки в число
+    //                     let balance: i64 = columns[1].parse().unwrap_or(0);
+
+    //                     // Добавляем пользователя и выставляем баланс
+    //                     storage.add_transaction(name.clone());
+    //                     let _ = storage.deposit(&name, balance);
+    //                 }
+    //             }
+    //         }
+    //     } else {
+    //         // если файла нет, создаём пользователей с нуля
+    //         for user in ["John", "Alice", "Bob", "Vasya"] {
+    //             storage.add_transaction(user.to_string());
+    //         }
+    //     }
+
+    //     storage
+    // }
+
+    // /// Сохраняет текущее состояние Storage в CSV-файл
+    // pub fn save_storage_to_file(&self, file_path: &str) {
+    //     let mut data = String::new();
+
+    //     // Собираем все данные в одну строку формата "Name,Balance"
+    //     // Бежим по вектору
+    //     for (name, balance) in self.get_all() {
+    //         // Разделяем newline'ом записи, всё по классике
+    //         data.push_str(&format!("{},{}\n", name, balance.get_value()));
+    //     }
+
+    //     // Записываем в файл
+    //     // Здесь мы не используем BufWriter, потому что сразу пишем всю строку целиком.
+        
+    //     // Создаём родительские директории
+    //     if let Some(parent) = Path::new(file_path).parent() {
+    //         fs::create_dir_all(parent).unwrap();
+    //     }
+
+    //     fs::write(file_path, data).expect("Не удалось записать файл");
+    // }
 }
 
 impl CsvFormatIO<Report> for Report {
     fn new_from_csv_file<R: std::io::Read>(reader: &mut R) -> Result<Report, String> {
-        
-        let new_report = Report::new();
-        // println!("Чтение из CSV-файла: {:?}", 5);
-        // Ok(new_report)
-
-        let mut buffer = String::new();
-
         // Можно весь прочитать
         // match reader.read_to_string(&mut buffer) {
 
@@ -102,22 +201,67 @@ impl CsvFormatIO<Report> for Report {
         // Каждая строка — это Result<String>, поэтому делаем if let Ok
         let buf_reader = BufReader::new(reader);
 
-        // Читаем файл построчно
+        // Создаём новый Report и читаем файл построчно
+        let mut new_report = Self::new();
+
         for cur_line in buf_reader.lines() {
             match cur_line {
                 Ok(ok_line) => {
-                    println!("Processing line: {}", ok_line);
-                    // report.lines.push(ok_line);  // Store the line
-                    // return Some(new_report);
+                    println!("Прочитанная строка: {}", ok_line);
+                    // Разделяем строку по запятым
+                    let columns: Vec<&str> = ok_line.trim().split(',').collect();
+
+                    // Если два столбца
+                    if columns.len() == 8 {
+
+                        // Получем поля из вектора:
+                        // 1. Transaction ID
+                        let mut tx_id = Report::parse_u64_with_warning(columns[0], 0);
+
+                        // 2. Transaction Type: сравниваем с &str
+                        let tx_type = match columns[1] {
+                            "DEPOSIT" => TransactionType::Deposit,
+                            "WITHDRAWAL" => TransactionType::Withdrawal,
+                            "TRANSFER" => TransactionType::Transfer,
+                            _ => TransactionType::Unknown
+                        };
+                        
+                        // 3. From User
+                        let from_user_id = Report::parse_u64_with_warning(columns[2], 0);
+                        // 4. To User
+                        let to_user_id = Report::parse_u64_with_warning(columns[3], 0);
+                        // 5. Amount
+                        let amount = Report::parse_u64_with_warning(columns[4], 0);
+                        // 6. Timestamp
+                        let timestamp = Report::parse_u64_with_warning(columns[5], 0);
+
+                        // 7. Status
+                        let status = match columns[6] {
+                            "SUCCESS" => TransactionStatus::Success,
+                            "FAILURE" => TransactionStatus::Failure,
+                            "PENDING" => TransactionStatus::Pending,
+                            _ => TransactionStatus::Unknown,
+                        };
+
+                        // 8. Description
+                        let description = columns[7].to_string();
+
+                        // Добавляем транзакцию в вектор          
+                        new_report.add_transaction(Transaction { tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description });
+
+                    }
+                    else {
+                        println!("Неверный формат транзакции: {}", ok_line);
+                    }
                 },
                 Err(e) => {
-                    return Err(format!("Error reading line: {}", e));
+                    return Err(format!("Ошибка чтения строки: {}", e));
                 }
             }
         }
 
-        // Ok(new_report)
-        Err("Искусственная ошибка для проверки вызова".to_string())
+        // Err("Искусственная ошибка для проверки вызова".to_string())
+        Ok(new_report)
     }
 
     fn write_to_csv_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), String> {

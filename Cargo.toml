@@ -11,8 +11,8 @@ name = "parser"
 path = "src/main.rs"
 
 [[bin]]
-name = "comparer"
-path = "src/bin/comparer.rs"
+name = "comparator"
+path = "src/bin/comparator.rs"
 
 # Тут обязательно подчёркивание
 [lib]

@@ -1,9 +1,10 @@
 use parser::report::Report;
 use parser::csv_format::CsvFormatIO;
 use std::fs::File;
+use std::path::Path;
 
 fn main() {
-    let file_path = String::from("/home/m_rakul/Code/RustYandex/bank-system/aux/balance.csv");
+    let file_path = Path::new("aux/records_example.csv");
 
     // Открываем файл
     let mut file = File::open(file_path)
@@ -18,7 +19,7 @@ fn main() {
             std::process::exit(1);
         });
 
-    println!("Отчёт: {:?} ", report);
+    println!("Отчёт: {:?} размер {} ", report, report.get_transactions().len());
 
     // let report = Report::new_from_csv_file();
 }
