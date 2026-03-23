@@ -14,10 +14,10 @@ path = "src/main.rs"
 name = "comparator"
 path = "src/bin/comparator.rs"
 
-# Тут обязательно подчёркивание
 [lib]
 name = "parser"
 path = "src/lib.rs"
 
-
+# Для переводов в сетевой порядок байтов и обратно
 [dependencies]
+byteorder = "1.5.0"

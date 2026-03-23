@@ -1,87 +1,12 @@
 use std::io::{BufRead, BufReader};
-use std::fmt::Formatter;
-use std::fmt;
-use std::path::Path;
-// use std::fs::File;
-// use std::fs;
+use std::mem;
+use byteorder::{ByteOrder, BigEndian, LittleEndian};
+use std::io::ErrorKind;
 
-use crate::report::fmt::Display;
+use crate::transaction::{BinTransactionHeader, BinTransactionBodyFixed, Transaction, TransactionStatus, TransactionType};
 use crate::csv_format::CsvFormatIO;
 use crate::text_format::TextFormatIO;
 use crate::bin_format::BinFormatIO;
-
-// Задаём тип (аналог using C++)
-pub type ID = u64;
-
-// Тип транзакции
-#[derive(Debug)]
-enum TransactionType {
-    Deposit,
-    Withdrawal,
-    Transfer,
-    Unknown
-}
-
-// Для вывода в виде строки
-impl Display for TransactionType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            TransactionType::Deposit => write!(f, "DEPOSIT"),
-            TransactionType::Withdrawal=> write!(f, "WITHDRAWAL"),
-            TransactionType::Transfer=> write!(f, "TRANSFER"),
-            TransactionType::Unknown => write!(f, "UNKNOWN"),
-        }
-    }
-}
-
-// Статус транзакции
-#[derive(Debug)]
-enum TransactionStatus {
-    Success,
-    Failure,
-    Pending,
-    Unknown,
-}
-
-// Для вывода в виде строки
-impl Display for TransactionStatus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            TransactionStatus::Success => write!(f, "SUCCESS"),
-            TransactionStatus::Failure => write!(f, "FAILURE"),
-            TransactionStatus::Pending => write!(f, "PENDING"),
-            TransactionStatus::Unknown => write!(f, "UNKONWN"),
-        }
-    }
-}
-
-// Структура для чтения/записи транзакции
-#[derive(Debug)]
-pub struct Transaction {
-    tx_id:          u64,
-    tx_type:        TransactionType,
-    from_user_id:   u64,
-    to_user_id:     u64,
-    amount:         u64,
-    timestamp:      u64,
-    status:         TransactionStatus,
-    description:    String,
-}
-
-// Конструктор из значений
-impl Transaction {
-    pub fn new(tx_id:        u64,
-               tx_type:      TransactionType,
-               from_user_id: u64,
-               to_user_id:   u64,
-               amount:       u64,
-               timestamp:    u64,
-               status:       TransactionStatus,
-               description:  String) -> Self 
-            {
-                Transaction {tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description}
-            }
-}
 
 // Хранение отчёта в виде вектора транзакций
 #[derive(Debug)]
@@ -101,7 +26,13 @@ impl Report {
         }
     }
     
-    // Добавить транзакцию (ДЛЯ HASHMAP): важно, что передаём с передачей владения для .insert()
+    pub fn add_transaction(&mut self, tx_to_add: Transaction) -> () {
+        self.transactions.push(tx_to_add)
+    }
+
+
+    /*** Реализаии для HashMap, если понадобятся ***/
+    // Добавить транзакцию: важно, что передаём с передачей владения для .insert()
     // С одним проходом => .entry()
     // pub fn add_transaction(&mut self, tx_to_add: Transaction) -> Option<&Transaction> {
     //     match self.transactions.entry(tx_to_add.tx_id) {
@@ -118,10 +49,6 @@ impl Report {
     //         }
     //     }
     // }
-
-    pub fn add_transaction(&mut self, tx_to_add: Transaction) -> () {
-        self.transactions.push(tx_to_add)
-    }
 
     // Удалить транзакцию (ДЛЯ HASHMAP): Option<i64> => "забираем" данные (Copy для примитивов)
     // pub fn remove_transaction(&mut self, tx_id_to_remove: &ID) -> Option<Transaction> {
@@ -146,73 +73,115 @@ impl Report {
         }
     }
 
-    // /// Загружает данные из CSV-файла или создаёт хранилище с дефолтными пользователями
-    // // (!) Важно, что функция не принимает &self
-    // pub fn load_file_to_storage(file_path: &str) -> Report {
-    //     let mut storage = Report::new();
+    // Возвращаем Result<Option<Transaction>, ..., поскольку Transaction может быть не получена в случае EOF
+    fn read_one_bin_transaction<R: std::io::Read>(reader: &mut R) -> Result<Option<Transaction>, String> {
+        // Выделяем буфер для header'а
+        let mut header_bytes = [0u8; mem::size_of::<BinTransactionHeader>()];
 
-    //     // Проверяем, существует ли файл
-    //     if Path::new(file_path).exists() {
-    //         // Открываем файл
-    //         let file = File::open(file_path).unwrap();
+        const BODY_SIZE_NO_DESCR: usize = mem::size_of::<BinTransactionBodyFixed>();
 
-    //         // Оборачиваем файл в BufReader
-    //         // BufReader читает данные блоками и хранит их в буфере,
-    //         // поэтому построчное чтение (lines()) работает быстрее, чем читать по байту
-    //         let reader = BufReader::new(file);
+        // Читаем строго количество байт 
+        match reader.read_exact(&mut header_bytes) {
+            Ok(()) => {},
+            // Для обработки EOF
+            Err(ref e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(None),
+            Err(e) => return Err(format!("Failed to read header: {}", e)),
+        }
 
-    //         // Читаем файл построчно
-    //         for cur_line in reader.lines() {
-    //             // Каждая строка — это Result<String>, поэтому делаем if let Ok
-    //             if let Ok(ok_line) = cur_line {
-    //                 // Разделяем строку по запятой: "Name,Balance"
-    //                 let columns: Vec<&str> = ok_line.trim().split(',').collect();
-
-    //                 // Если два столбца
-    //                 if columns.len() == 2 {
-    //                     let name = columns[0].to_string();
-    //                     // Пробуем преобразовать баланс из строки в число
-    //                     let balance: i64 = columns[1].parse().unwrap_or(0);
-
-    //                     // Добавляем пользователя и выставляем баланс
-    //                     storage.add_transaction(name.clone());
-    //                     let _ = storage.deposit(&name, balance);
-    //                 }
-    //             }
-    //         }
-    //     } else {
-    //         // если файла нет, создаём пользователей с нуля
-    //         for user in ["John", "Alice", "Bob", "Vasya"] {
-    //             storage.add_transaction(user.to_string());
-    //         }
-    //     }
-
-    //     storage
-    // }
-
-    // /// Сохраняет текущее состояние Storage в CSV-файл
-    // pub fn save_storage_to_file(&self, file_path: &str) {
-    //     let mut data = String::new();
-
-    //     // Собираем все данные в одну строку формата "Name,Balance"
-    //     // Бежим по вектору
-    //     for (name, balance) in self.get_all() {
-    //         // Разделяем newline'ом записи, всё по классике
-    //         data.push_str(&format!("{},{}\n", name, balance.get_value()));
-    //     }
-
-    //     // Записываем в файл
-    //     // Здесь мы не используем BufWriter, потому что сразу пишем всю строку целиком.
+        // Используем дополнительный crate byteorder для переводов из сетевого порядка байт и обратно
+        let magic = &header_bytes[0..4];
+        // Для чтения используем слайсы - ключевой момент
+        let record_size = BigEndian::read_u32(&header_bytes[4..8]) as usize;
         
-    //     // Создаём родительские директории
-    //     if let Some(parent) = Path::new(file_path).parent() {
-    //         fs::create_dir_all(parent).unwrap();
-    //     }
+        // Проверка на 'YPBN'
+        const EXPECTED_MAGIC: [u8; 4] = [0x59, 0x50, 0x42, 0x4E]; 
+        
+        // Позволяет сравнивать таким образом
+        if magic != EXPECTED_MAGIC {
+            return Err(format!("Неверное magic: {:?}, должно быть {:?}", magic, EXPECTED_MAGIC));
+        }
+        
+        // Читаем body
+        let mut body_bytes = vec![0u8; record_size];
+        reader.read_exact(&mut body_bytes)
+            .map_err(|e| format!("Не смогли прочитать {}", e))?;
+        
+        // Прочитали меньше чем тело записи
+        if body_bytes.len() < BODY_SIZE_NO_DESCR {
+            return Err("Слишком короткая запись".to_string());
+        }
+        
+        // Извлекаем остальные записи
+        let mut offset = 0;
+        let mut field_len = mem::size_of::<u64>();
 
-    //     fs::write(file_path, data).expect("Не удалось записать файл");
-    // }
+        let tx_id = BigEndian::read_u64(&body_bytes[offset..offset + field_len]); 
+        offset += field_len;
+
+        field_len = mem::size_of::<u8>();
+        let tx_type = body_bytes[offset]; 
+        offset += field_len;
+
+        field_len = mem::size_of::<u64>();
+        let from_user_id = BigEndian::read_u64(&body_bytes[offset .. offset + field_len]); 
+        offset += field_len;
+
+        field_len = mem::size_of::<u64>();
+        let to_user_id = BigEndian::read_u64(&body_bytes[offset .. offset + field_len]); 
+        offset += field_len;
+
+        field_len = mem::size_of::<i64>();
+        let amount = BigEndian::read_i64(&body_bytes[offset .. offset + field_len]); 
+        offset += field_len;
+
+        field_len = mem::size_of::<u64>();
+        let timestamp = BigEndian::read_u64(&body_bytes[offset .. offset + field_len]); 
+        offset += field_len;
+
+        field_len = mem::size_of::<u8>();
+        let status = body_bytes[offset]; 
+        offset += field_len;
+
+        field_len = mem::size_of::<u32>();
+        let desc_len = BigEndian::read_u32(&body_bytes[offset .. offset + field_len]) as usize; 
+        offset += field_len;
+                
+        
+        // Проверка на длину Description
+        if offset + desc_len > body_bytes.len() {
+            return Err("Указана слишком большая длина Description".to_string());
+        }
+        
+        // Забираем description
+        let description_bytes = &body_bytes[offset .. offset + desc_len];
+        
+        // Копируем - плохо
+        // let description = String::from_utf8(description_bytes.to_vec())
+        //     .map_err(|e| format!("Только UTF-8 символы: {}", e))?;
+
+        // Через слайс
+        let description = std::str::from_utf8(description_bytes)
+            .map_err(|e| format!("Только UTF-8 символы: {}", e))?
+            .to_string();
+
+        let new_transaction = Transaction::new(tx_id,
+                                                            TransactionType::from_u8(tx_type),
+                                                            from_user_id,
+                                                            to_user_id,
+                                                            amount as u64,
+                                                            timestamp,
+                                                            TransactionStatus::from_u8(status),
+                                                            description); 
+
+        println!("Прочитанная запись: {:?}", new_transaction);
+
+        Ok(Some(new_transaction))
+
+    }
+
 }
 
+// CSV-формат для Report
 impl CsvFormatIO<Report> for Report {
     fn new_from_csv_file<R: std::io::Read>(reader: R) -> Result<Report, String> {
         // Можно весь прочитать
@@ -317,18 +286,46 @@ impl CsvFormatIO<Report> for Report {
 
         Ok(())
     }
-
-
-
 }
 
+
+// Bin-формат для Report
 impl BinFormatIO<Report> for Report {
-    fn new_from_bin_file<R: std::io::Read>(reader: &mut R) -> Result<Report, String> {
-        todo!()
+    fn new_from_bin_file<R: std::io::Read>(mut reader: R) -> Result<Report, String> {
+        let mut report = Report::new();
+        
+        // Идём по списку, читая по одному
+        loop {
+            match Report::read_one_bin_transaction(&mut reader) {
+                Ok(Some(transaction)) => {
+                    report.add_transaction(transaction);
+                },
+                Ok(None) => {
+                    // EOF => заканчиваем чтение
+                    break;
+                },
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
+        
+        Ok(report)
     }
 
-    fn write_to_bin_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), String> {
-        todo!()
+    fn write_to_bin_file<W: std::io::Write>(&mut self, mut writer: &mut W) -> Result<(), String> {
+        
+        for transaction in &self.transactions {
+            transaction.write_to_binary_writer(&mut writer)?;
+
+            writer.flush()
+                .map_err(|e| format!("Не удалось транзакцию: {:?} => {}", transaction, e))?;
+        }
+        
+        writer.flush()
+            .map_err(|e| format!("Не удалось записать данные: {}", e))?;
+        
+        Ok(())
     }
 }
 
@@ -341,7 +338,6 @@ impl TextFormatIO<Report> for Report {
         todo!()
     }
 }
-
 
 //*** Секция тестов для Report ***/
 
