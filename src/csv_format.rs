@@ -4,8 +4,4 @@ pub trait CsvFormatIO<InternalType> {
 
     // Записывает отчёт в любой приёмник, реализующий трейт Write
     fn write_to_csv_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), String>;
-
-    // fn read_from_csv_file<R: std::io::Read>(&self, r: &mut R) -> Result<&InternalType, String> {
-    //     todo!()
-    // }
 }
