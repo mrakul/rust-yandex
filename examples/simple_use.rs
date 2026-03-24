@@ -112,23 +112,22 @@ fn main() {
             std::process::exit(1);
         });
     
-        println!("Отчёт: {:?} размер {} ", report, report.get_transactions().len());
+    println!("Отчёт: {:?} размер {} ", report, report.get_transactions().len());
 
-        // 2. Запись в текстовом формате
-        let txt_file_to_write_path = Path::new("aux/output.txt");
+    // 2. Запись в текстовом формате
+    let txt_file_to_write_path = Path::new("aux/output.txt");
 
-        let mut txt_file_to_write = File::create(txt_file_to_write_path)
-            .unwrap_or_else(|e| {
-                eprintln!("Не удалось создать файл: {}", e);
-                std::process::exit(1);
-            });
+    let mut txt_file_to_write = File::create(txt_file_to_write_path)
+        .unwrap_or_else(|e| {
+            eprintln!("Не удалось создать файл: {}", e);
+            std::process::exit(1);
+        });
 
-        // Оборачиваем для буферизированного вывода
-        let mut txt_buf_writer = BufWriter::new(txt_file_to_write);
-        
-        match report.write_to_text_file(&mut txt_buf_writer) {
-                Ok(()) => println!("Записано в файл: {:?}", txt_file_to_write_path),
-                Err(error) => println!("Ошибка записи в файл {:?}: {}", txt_file_to_write_path, error),
-        }
-
+    // Оборачиваем для буферизированного вывода
+    let mut txt_buf_writer = BufWriter::new(txt_file_to_write);
+    
+    match report.write_to_text_file(&mut txt_buf_writer) {
+        Ok(()) => println!("Записано в файл: {:?}", txt_file_to_write_path),
+        Err(error) => println!("Ошибка записи в файл {:?}: {}", txt_file_to_write_path, error),
+    }
 }
