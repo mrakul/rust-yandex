@@ -46,9 +46,9 @@ fn run_converter(args: &Args) -> Result<(), String> {
     
     // Читаем отчёт
     let mut report = match args.input_format.to_lowercase().as_str() {
-        "csv" => Report::new_from_csv_file(input_file)?,
-        "txt" => Report::new_from_text_file(input_file)?,
-        "bin" => Report::new_from_bin_file(input_file)?,
+        // "csv" => Report::new_from_csv_reader(input_file)?,
+        "txt" => Report::new_from_text_reader(input_file)?,
+        "bin" => Report::new_from_bin_reader(input_file)?,
         _ => return Err(format!("Неверный формат: {}", args.input_format))
         // Поскольку провалидировали, можно так:
         // _ => unreachable!(),
@@ -58,9 +58,9 @@ fn run_converter(args: &Args) -> Result<(), String> {
     let mut stdout = io::stdout();
     
     match args.output_format.as_str() {
-        "csv" => report.write_to_csv_file(&mut stdout)?,
-        "txt" => report.write_to_text_file(&mut stdout)?,
-        "bin" => report.write_to_bin_file(&mut stdout)?,
+        "csv" => report.write_as_csv_to_writer(&mut stdout)?,
+        "txt" => report.write_as_text_to_writer(&mut stdout)?,
+        "bin" => report.write_as_bin_to_writer(&mut stdout)?,
         _ => return Err(format!("Неверный формат: {}", args.input_format))
         // Поскольку провалидировали, можно так:
         // _ => unreachable!(),

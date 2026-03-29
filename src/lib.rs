@@ -26,7 +26,7 @@
 //!            std::process::exit(1);
 //!        });
 //!
-//!    let mut report = Report::new_from_csv_file(&mut file_to_read)
+//!    let mut report = Report::new_from_csv_reader(&mut file_to_read)
 //!        .unwrap_or_else(|e| {
 //!            eprintln!("СSV не прочитан: {}", e);
 //!            std::process::exit(1);
@@ -41,18 +41,18 @@
 //!            std::process::exit(1);
 //!        });
 //!
-//!    match report.write_to_csv_file(&mut csv_file_to_write) {
+//!    match report.write_to_csv_writer(&mut csv_file_to_write) {
 //!        Ok(()) => println!("Записано в файл: {:?}", csv_file_to_write_path),
 //!        Err(error) => println!("Ошибка записи в файл {:?}: {}", csv_file_to_write_path, error),
 //!    }
 //! ```
 //! Используемые функции:
-//! - `Report::new_from_csv_file<R: std::io::Read>(reader: R) -> Result<InternalType, String>` 
-//! - `Report::new_from_text_file<R: std::io::Read>(reader: R) -> Result<InternalType, String>`
-//! - `Report::new_from_bin_file<R: std::io::Read>(reader: R) -> Result<InternalType, String>`
-//! - `report.write_to_csv_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), String>`
-//! - `report.write_to_text_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), String>`
-//! - `report.write_to_bin_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), String>`
+//! - `Report::new_from_csv_reader<R: std::io::Read>(reader: R) -> Result<InternalType, ParserError>` 
+//! - `Report::new_from_text_reader<R: std::io::Read>(reader: R) -> Result<InternalType, ParserError>`
+//! - `Report::new_from_bin_reader<R: std::io::Read>(reader: R) -> Result<InternalType, ParserError>`
+//! - `report.write_as_csv_to_writer<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), ParserError>`
+//! - `report.write_as_text_to_writer<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), ParserError>`
+//! - `report.write_as_bin_to_writer<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), ParserError>`
 //!
 //! Для подробного описания функций см.модуль report.rs
 //! 

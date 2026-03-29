@@ -1,0 +1,989 @@
+Прочитанная строка: # Record 1 (DEPOSIT)
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: TIMESTAMP: 1633036860000
+Прочитанная строка: DESCRIPTION: "Record number 1"
+Прочитанная строка: TX_ID: 1000000000000000
+Прочитанная строка: AMOUNT: 100
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: 
+Прочитанная строка: # Record 2 (TRANSFER)
+Прочитанная строка: DESCRIPTION: "Record number 2"
+Прочитанная строка: TIMESTAMP: 1633036920000
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: AMOUNT: 200
+Прочитанная строка: TX_ID: 1000000000000001
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: 
+Прочитанная строка: # Record 3 (WITHDRAWAL)
+Прочитанная строка: DESCRIPTION: "Record number 3"
+Прочитанная строка: FROM_USER_ID: 599094029349995112
+Прочитанная строка: TX_ID: 1000000000000002
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: AMOUNT: 300
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TIMESTAMP: 1633036980000
+Прочитанная строка: 
+Прочитанная строка: # Record 4 (DEPOSIT)
+Прочитанная строка: TIMESTAMP: 1633037040000
+Прочитанная строка: TO_USER_ID: 6386297538413372968
+Прочитанная строка: AMOUNT: 400
+Прочитанная строка: TX_ID: 1000000000000003
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: DESCRIPTION: "Record number 4"
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 5 (TRANSFER)
+Прочитанная строка: AMOUNT: 500
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: TX_ID: 1000000000000004
+Прочитанная строка: DESCRIPTION: "Record number 5"
+Прочитанная строка: TIMESTAMP: 1633037100000
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: 
+Прочитанная строка: # Record 6 (WITHDRAWAL)
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: TX_ID: 1000000000000005
+Прочитанная строка: DESCRIPTION: "Record number 6"
+Прочитанная строка: AMOUNT: 600
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: TIMESTAMP: 1633037160000
+Прочитанная строка: FROM_USER_ID: 6238472699204189335
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: 
+Прочитанная строка: # Record 7 (DEPOSIT)
+Прочитанная строка: TO_USER_ID: 728970204360217851
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: AMOUNT: 700
+Прочитанная строка: DESCRIPTION: "Record number 7"
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: TIMESTAMP: 1633037220000
+Прочитанная строка: TX_ID: 1000000000000006
+Прочитанная строка: 
+Прочитанная строка: # Record 8 (TRANSFER)
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: DESCRIPTION: "Record number 8"
+Прочитанная строка: TX_ID: 1000000000000007
+Прочитанная строка: TIMESTAMP: 1633037280000
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 800
+Прочитанная строка: TO_USER_ID: 7524637015105340931
+Прочитанная строка: 
+Прочитанная строка: # Record 9 (WITHDRAWAL)
+Прочитанная строка: AMOUNT: 900
+Прочитанная строка: TX_ID: 1000000000000008
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: FROM_USER_ID: 5108918777190567747
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: TIMESTAMP: 1633037340000
+Прочитанная строка: DESCRIPTION: "Record number 9"
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 10 (DEPOSIT)
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: TX_ID: 1000000000000009
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: AMOUNT: 1000
+Прочитанная строка: TIMESTAMP: 1633037400000
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: DESCRIPTION: "Record number 10"
+Прочитанная строка: 
+Прочитанная строка: # Record 11 (TRANSFER)
+Прочитанная строка: AMOUNT: 1100
+Прочитанная строка: TX_ID: 1000000000000010
+Прочитанная строка: FROM_USER_ID: 2742528693116261933
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: DESCRIPTION: "Record number 11"
+Прочитанная строка: TO_USER_ID: 6195600858058280266
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TIMESTAMP: 1633037460000
+Прочитанная строка: 
+Прочитанная строка: # Record 12 (WITHDRAWAL)
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 1200
+Прочитанная строка: TIMESTAMP: 1633037520000
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: TX_ID: 1000000000000011
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: DESCRIPTION: "Record number 12"
+Прочитанная строка: 
+Прочитанная строка: # Record 13 (DEPOSIT)
+Прочитанная строка: TX_ID: 1000000000000012
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: DESCRIPTION: "Record number 13"
+Прочитанная строка: TIMESTAMP: 1633037580000
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: AMOUNT: 1300
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: 
+Прочитанная строка: # Record 14 (TRANSFER)
+Прочитанная строка: DESCRIPTION: "Record number 14"
+Прочитанная строка: TIMESTAMP: 1633037640000
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 1400
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TX_ID: 1000000000000013
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: FROM_USER_ID: 2417651132117586249
+Прочитанная строка: 
+Прочитанная строка: # Record 15 (WITHDRAWAL)
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: AMOUNT: 1500
+Прочитанная строка: FROM_USER_ID: 8926044397622244281
+Прочитанная строка: TIMESTAMP: 1633037700000
+Прочитанная строка: DESCRIPTION: "Record number 15"
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: TX_ID: 1000000000000014
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 16 (DEPOSIT)
+Прочитанная строка: DESCRIPTION: "Record number 16"
+Прочитанная строка: TX_ID: 1000000000000015
+Прочитанная строка: TIMESTAMP: 1633037760000
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 1600
+Прочитанная строка: 
+Прочитанная строка: # Record 17 (TRANSFER)
+Прочитанная строка: TIMESTAMP: 1633037820000
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: DESCRIPTION: "Record number 17"
+Прочитанная строка: FROM_USER_ID: 1020507741685951480
+Прочитанная строка: TX_ID: 1000000000000016
+Прочитанная строка: AMOUNT: 1700
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: 
+Прочитанная строка: # Record 18 (WITHDRAWAL)
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: AMOUNT: 1800
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: DESCRIPTION: "Record number 18"
+Прочитанная строка: TX_ID: 1000000000000017
+Прочитанная строка: TIMESTAMP: 1633037880000
+Прочитанная строка: 
+Прочитанная строка: # Record 19 (DEPOSIT)
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: DESCRIPTION: "Record number 19"
+Прочитанная строка: TIMESTAMP: 1633037940000
+Прочитанная строка: AMOUNT: 1900
+Прочитанная строка: TX_ID: 1000000000000018
+Прочитанная строка: TO_USER_ID: 3448209716067487073
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 20 (TRANSFER)
+Прочитанная строка: TX_ID: 1000000000000019
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: DESCRIPTION: "Record number 20"
+Прочитанная строка: AMOUNT: 2000
+Прочитанная строка: TO_USER_ID: 8940414264323298111
+Прочитанная строка: FROM_USER_ID: 8969803948209661815
+Прочитанная строка: TIMESTAMP: 1633038000000
+Прочитанная строка: 
+Прочитанная строка: # Record 21 (WITHDRAWAL)
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: AMOUNT: 2100
+Прочитанная строка: TIMESTAMP: 1633038060000
+Прочитанная строка: TX_ID: 1000000000000020
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: DESCRIPTION: "Record number 21"
+Прочитанная строка: FROM_USER_ID: 5105904557691022553
+Прочитанная строка: 
+Прочитанная строка: # Record 22 (DEPOSIT)
+Прочитанная строка: TX_ID: 1000000000000021
+Прочитанная строка: TIMESTAMP: 1633038120000
+Прочитанная строка: AMOUNT: 2200
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: DESCRIPTION: "Record number 22"
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: 
+Прочитанная строка: # Record 23 (TRANSFER)
+Прочитанная строка: FROM_USER_ID: 2726427453230700552
+Прочитанная строка: TIMESTAMP: 1633038180000
+Прочитанная строка: DESCRIPTION: "Record number 23"
+Прочитанная строка: TO_USER_ID: 6016400118161143871
+Прочитанная строка: AMOUNT: 2300
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TX_ID: 1000000000000022
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: 
+Прочитанная строка: # Record 24 (WITHDRAWAL)
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: TIMESTAMP: 1633038240000
+Прочитанная строка: DESCRIPTION: "Record number 24"
+Прочитанная строка: AMOUNT: 2400
+Прочитанная строка: TX_ID: 1000000000000023
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: 
+Прочитанная строка: # Record 25 (DEPOSIT)
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 2500
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: TIMESTAMP: 1633038300000
+Прочитанная строка: DESCRIPTION: "Record number 25"
+Прочитанная строка: TX_ID: 1000000000000024
+Прочитанная строка: 
+Прочитанная строка: # Record 26 (TRANSFER)
+Прочитанная строка: TIMESTAMP: 1633038360000
+Прочитанная строка: TX_ID: 1000000000000025
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TO_USER_ID: 884485087811241507
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: DESCRIPTION: "Record number 26"
+Прочитанная строка: AMOUNT: 2600
+Прочитанная строка: 
+Прочитанная строка: # Record 27 (WITHDRAWAL)
+Прочитанная строка: FROM_USER_ID: 951983960969641805
+Прочитанная строка: AMOUNT: 2700
+Прочитанная строка: TX_ID: 1000000000000026
+Прочитанная строка: TIMESTAMP: 1633038420000
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: DESCRIPTION: "Record number 27"
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 28 (DEPOSIT)
+Прочитанная строка: DESCRIPTION: "Record number 28"
+Прочитанная строка: TX_ID: 1000000000000027
+Прочитанная строка: AMOUNT: 2800
+Прочитанная строка: TO_USER_ID: 2121988736358692036
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: TIMESTAMP: 1633038480000
+Прочитанная строка: 
+Прочитанная строка: # Record 29 (TRANSFER)
+Прочитанная строка: TX_ID: 1000000000000028
+Прочитанная строка: DESCRIPTION: "Record number 29"
+Прочитанная строка: TIMESTAMP: 1633038540000
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 2900
+Прочитанная строка: 
+Прочитанная строка: # Record 30 (WITHDRAWAL)
+Прочитанная строка: FROM_USER_ID: 6446807748943611174
+Прочитанная строка: DESCRIPTION: "Record number 30"
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TX_ID: 1000000000000029
+Прочитанная строка: TIMESTAMP: 1633038600000
+Прочитанная строка: AMOUNT: 3000
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 31 (DEPOSIT)
+Прочитанная строка: TIMESTAMP: 1633038660000
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: TX_ID: 1000000000000030
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: AMOUNT: 3100
+Прочитанная строка: DESCRIPTION: "Record number 31"
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 32 (TRANSFER)
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: TX_ID: 1000000000000031
+Прочитанная строка: TIMESTAMP: 1633038720000
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 3200
+Прочитанная строка: DESCRIPTION: "Record number 32"
+Прочитанная строка: FROM_USER_ID: 6528052289244562130
+Прочитанная строка: 
+Прочитанная строка: # Record 33 (WITHDRAWAL)
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TIMESTAMP: 1633038780000
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: AMOUNT: 3300
+Прочитанная строка: DESCRIPTION: "Record number 33"
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TX_ID: 1000000000000032
+Прочитанная строка: 
+Прочитанная строка: # Record 34 (DEPOSIT)
+Прочитанная строка: DESCRIPTION: "Record number 34"
+Прочитанная строка: TIMESTAMP: 1633038840000
+Прочитанная строка: TX_ID: 1000000000000033
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 3400
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: 
+Прочитанная строка: # Record 35 (TRANSFER)
+Прочитанная строка: TX_ID: 1000000000000034
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: TIMESTAMP: 1633038900000
+Прочитанная строка: TO_USER_ID: 1096539934895465193
+Прочитанная строка: DESCRIPTION: "Record number 35"
+Прочитанная строка: FROM_USER_ID: 3905656328340714893
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: AMOUNT: 3500
+Прочитанная строка: 
+Прочитанная строка: # Record 36 (WITHDRAWAL)
+Прочитанная строка: TX_ID: 1000000000000035
+Прочитанная строка: TIMESTAMP: 1633038960000
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: AMOUNT: 3600
+Прочитанная строка: DESCRIPTION: "Record number 36"
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: 
+Прочитанная строка: # Record 37 (DEPOSIT)
+Прочитанная строка: TO_USER_ID: 3317677974065658947
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: DESCRIPTION: "Record number 37"
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: TIMESTAMP: 1633039020000
+Прочитанная строка: TX_ID: 1000000000000036
+Прочитанная строка: AMOUNT: 3700
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 38 (TRANSFER)
+Прочитанная строка: TO_USER_ID: 1260904716505397451
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: AMOUNT: 3800
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TIMESTAMP: 1633039080000
+Прочитанная строка: TX_ID: 1000000000000037
+Прочитанная строка: DESCRIPTION: "Record number 38"
+Прочитанная строка: 
+Прочитанная строка: # Record 39 (WITHDRAWAL)
+Прочитанная строка: AMOUNT: 3900
+Прочитанная строка: TX_ID: 1000000000000038
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: DESCRIPTION: "Record number 39"
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: TIMESTAMP: 1633039140000
+Прочитанная строка: 
+Прочитанная строка: # Record 40 (DEPOSIT)
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: DESCRIPTION: "Record number 40"
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: TIMESTAMP: 1633039200000
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: AMOUNT: 4000
+Прочитанная строка: TX_ID: 1000000000000039
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 41 (TRANSFER)
+Прочитанная строка: DESCRIPTION: "Record number 41"
+Прочитанная строка: TO_USER_ID: 824491659835168692
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: FROM_USER_ID: 6549511847913882499
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TIMESTAMP: 1633039260000
+Прочитанная строка: TX_ID: 1000000000000040
+Прочитанная строка: AMOUNT: 4100
+Прочитанная строка: 
+Прочитанная строка: # Record 42 (WITHDRAWAL)
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TIMESTAMP: 1633039320000
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: TX_ID: 1000000000000041
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: AMOUNT: 4200
+Прочитанная строка: DESCRIPTION: "Record number 42"
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: 
+Прочитанная строка: # Record 43 (DEPOSIT)
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: TIMESTAMP: 1633039380000
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: DESCRIPTION: "Record number 43"
+Прочитанная строка: TX_ID: 1000000000000042
+Прочитанная строка: AMOUNT: 4300
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 44 (TRANSFER)
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: DESCRIPTION: "Record number 44"
+Прочитанная строка: AMOUNT: 4400
+Прочитанная строка: TX_ID: 1000000000000043
+Прочитанная строка: TIMESTAMP: 1633039440000
+Прочитанная строка: TO_USER_ID: 4367754691116269065
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: 
+Прочитанная строка: # Record 45 (WITHDRAWAL)
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: DESCRIPTION: "Record number 45"
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: TX_ID: 1000000000000044
+Прочитанная строка: AMOUNT: 4500
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: TIMESTAMP: 1633039500000
+Прочитанная строка: 
+Прочитанная строка: # Record 46 (DEPOSIT)
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: TX_ID: 1000000000000045
+Прочитанная строка: TIMESTAMP: 1633039560000
+Прочитанная строка: AMOUNT: 4600
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: DESCRIPTION: "Record number 46"
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: 
+Прочитанная строка: # Record 47 (TRANSFER)
+Прочитанная строка: FROM_USER_ID: 7846984624886789445
+Прочитанная строка: TX_ID: 1000000000000046
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TIMESTAMP: 1633039620000
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: DESCRIPTION: "Record number 47"
+Прочитанная строка: AMOUNT: 4700
+Прочитанная строка: 
+Прочитанная строка: # Record 48 (WITHDRAWAL)
+Прочитанная строка: DESCRIPTION: "Record number 48"
+Прочитанная строка: AMOUNT: 4800
+Прочитанная строка: TIMESTAMP: 1633039680000
+Прочитанная строка: STATUS: SUCCESS
+Прочитанная строка: TO_USER_ID: 0
+Прочитанная строка: TX_ID: 1000000000000047
+Прочитанная строка: TX_TYPE: WITHDRAWAL
+Прочитанная строка: FROM_USER_ID: 9223372036854775807
+Прочитанная строка: 
+Прочитанная строка: # Record 49 (DEPOSIT)
+Прочитанная строка: TO_USER_ID: 9223372036854775807
+Прочитанная строка: TIMESTAMP: 1633039740000
+Прочитанная строка: DESCRIPTION: "Record number 49"
+Прочитанная строка: STATUS: FAILURE
+Прочитанная строка: TX_ID: 1000000000000048
+Прочитанная строка: AMOUNT: 4900
+Прочитанная строка: TX_TYPE: DEPOSIT
+Прочитанная строка: FROM_USER_ID: 0
+Прочитанная строка: 
+Прочитанная строка: # Record 50 (TRANSFER)
+Прочитанная строка: AMOUNT: 5000
+Прочитанная строка: TO_USER_ID: 4559035836574660663
+Прочитанная строка: STATUS: PENDING
+Прочитанная строка: TX_ID: 1000000000000049
+Прочитанная строка: DESCRIPTION: "Record number 50"
+Прочитанная строка: TX_TYPE: TRANSFER
+Прочитанная строка: TIMESTAMP: 1633039800000
+Прочитанная строка: FROM_USER_ID: 4221046299108674055
+# Запись о транзакции
+TX_ID: 1000000000000000
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 100
+TIMESTAMP: 1633036860000
+STATUS: FAILURE
+DESCRIPTION: "Record number 1"
+
+# Запись о транзакции
+TX_ID: 1000000000000001
+TX_TYPE: TRANSFER
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 9223372036854775807
+AMOUNT: 200
+TIMESTAMP: 1633036920000
+STATUS: PENDING
+DESCRIPTION: "Record number 2"
+
+# Запись о транзакции
+TX_ID: 1000000000000002
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 599094029349995112
+TO_USER_ID: 0
+AMOUNT: 300
+TIMESTAMP: 1633036980000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 3"
+
+# Запись о транзакции
+TX_ID: 1000000000000003
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 6386297538413372968
+AMOUNT: 400
+TIMESTAMP: 1633037040000
+STATUS: FAILURE
+DESCRIPTION: "Record number 4"
+
+# Запись о транзакции
+TX_ID: 1000000000000004
+TX_TYPE: TRANSFER
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 9223372036854775807
+AMOUNT: 500
+TIMESTAMP: 1633037100000
+STATUS: PENDING
+DESCRIPTION: "Record number 5"
+
+# Запись о транзакции
+TX_ID: 1000000000000005
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 6238472699204189335
+TO_USER_ID: 0
+AMOUNT: 600
+TIMESTAMP: 1633037160000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 6"
+
+# Запись о транзакции
+TX_ID: 1000000000000006
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 728970204360217851
+AMOUNT: 700
+TIMESTAMP: 1633037220000
+STATUS: FAILURE
+DESCRIPTION: "Record number 7"
+
+# Запись о транзакции
+TX_ID: 1000000000000007
+TX_TYPE: TRANSFER
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 7524637015105340931
+AMOUNT: 800
+TIMESTAMP: 1633037280000
+STATUS: PENDING
+DESCRIPTION: "Record number 8"
+
+# Запись о транзакции
+TX_ID: 1000000000000008
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 5108918777190567747
+TO_USER_ID: 0
+AMOUNT: 900
+TIMESTAMP: 1633037340000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 9"
+
+# Запись о транзакции
+TX_ID: 1000000000000009
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 1000
+TIMESTAMP: 1633037400000
+STATUS: FAILURE
+DESCRIPTION: "Record number 10"
+
+# Запись о транзакции
+TX_ID: 1000000000000010
+TX_TYPE: TRANSFER
+FROM_USER_ID: 2742528693116261933
+TO_USER_ID: 6195600858058280266
+AMOUNT: 1100
+TIMESTAMP: 1633037460000
+STATUS: PENDING
+DESCRIPTION: "Record number 11"
+
+# Запись о транзакции
+TX_ID: 1000000000000011
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 1200
+TIMESTAMP: 1633037520000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 12"
+
+# Запись о транзакции
+TX_ID: 1000000000000012
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 1300
+TIMESTAMP: 1633037580000
+STATUS: FAILURE
+DESCRIPTION: "Record number 13"
+
+# Запись о транзакции
+TX_ID: 1000000000000013
+TX_TYPE: TRANSFER
+FROM_USER_ID: 2417651132117586249
+TO_USER_ID: 9223372036854775807
+AMOUNT: 1400
+TIMESTAMP: 1633037640000
+STATUS: PENDING
+DESCRIPTION: "Record number 14"
+
+# Запись о транзакции
+TX_ID: 1000000000000014
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 8926044397622244281
+TO_USER_ID: 0
+AMOUNT: 1500
+TIMESTAMP: 1633037700000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 15"
+
+# Запись о транзакции
+TX_ID: 1000000000000015
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 1600
+TIMESTAMP: 1633037760000
+STATUS: FAILURE
+DESCRIPTION: "Record number 16"
+
+# Запись о транзакции
+TX_ID: 1000000000000016
+TX_TYPE: TRANSFER
+FROM_USER_ID: 1020507741685951480
+TO_USER_ID: 9223372036854775807
+AMOUNT: 1700
+TIMESTAMP: 1633037820000
+STATUS: PENDING
+DESCRIPTION: "Record number 17"
+
+# Запись о транзакции
+TX_ID: 1000000000000017
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 1800
+TIMESTAMP: 1633037880000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 18"
+
+# Запись о транзакции
+TX_ID: 1000000000000018
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 3448209716067487073
+AMOUNT: 1900
+TIMESTAMP: 1633037940000
+STATUS: FAILURE
+DESCRIPTION: "Record number 19"
+
+# Запись о транзакции
+TX_ID: 1000000000000019
+TX_TYPE: TRANSFER
+FROM_USER_ID: 8969803948209661815
+TO_USER_ID: 8940414264323298111
+AMOUNT: 2000
+TIMESTAMP: 1633038000000
+STATUS: PENDING
+DESCRIPTION: "Record number 20"
+
+# Запись о транзакции
+TX_ID: 1000000000000020
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 5105904557691022553
+TO_USER_ID: 0
+AMOUNT: 2100
+TIMESTAMP: 1633038060000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 21"
+
+# Запись о транзакции
+TX_ID: 1000000000000021
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 2200
+TIMESTAMP: 1633038120000
+STATUS: FAILURE
+DESCRIPTION: "Record number 22"
+
+# Запись о транзакции
+TX_ID: 1000000000000022
+TX_TYPE: TRANSFER
+FROM_USER_ID: 2726427453230700552
+TO_USER_ID: 6016400118161143871
+AMOUNT: 2300
+TIMESTAMP: 1633038180000
+STATUS: PENDING
+DESCRIPTION: "Record number 23"
+
+# Запись о транзакции
+TX_ID: 1000000000000023
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 2400
+TIMESTAMP: 1633038240000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 24"
+
+# Запись о транзакции
+TX_ID: 1000000000000024
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 2500
+TIMESTAMP: 1633038300000
+STATUS: FAILURE
+DESCRIPTION: "Record number 25"
+
+# Запись о транзакции
+TX_ID: 1000000000000025
+TX_TYPE: TRANSFER
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 884485087811241507
+AMOUNT: 2600
+TIMESTAMP: 1633038360000
+STATUS: PENDING
+DESCRIPTION: "Record number 26"
+
+# Запись о транзакции
+TX_ID: 1000000000000026
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 951983960969641805
+TO_USER_ID: 0
+AMOUNT: 2700
+TIMESTAMP: 1633038420000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 27"
+
+# Запись о транзакции
+TX_ID: 1000000000000027
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 2121988736358692036
+AMOUNT: 2800
+TIMESTAMP: 1633038480000
+STATUS: FAILURE
+DESCRIPTION: "Record number 28"
+
+# Запись о транзакции
+TX_ID: 1000000000000028
+TX_TYPE: TRANSFER
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 9223372036854775807
+AMOUNT: 2900
+TIMESTAMP: 1633038540000
+STATUS: PENDING
+DESCRIPTION: "Record number 29"
+
+# Запись о транзакции
+TX_ID: 1000000000000029
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 6446807748943611174
+TO_USER_ID: 0
+AMOUNT: 3000
+TIMESTAMP: 1633038600000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 30"
+
+# Запись о транзакции
+TX_ID: 1000000000000030
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 3100
+TIMESTAMP: 1633038660000
+STATUS: FAILURE
+DESCRIPTION: "Record number 31"
+
+# Запись о транзакции
+TX_ID: 1000000000000031
+TX_TYPE: TRANSFER
+FROM_USER_ID: 6528052289244562130
+TO_USER_ID: 9223372036854775807
+AMOUNT: 3200
+TIMESTAMP: 1633038720000
+STATUS: PENDING
+DESCRIPTION: "Record number 32"
+
+# Запись о транзакции
+TX_ID: 1000000000000032
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 3300
+TIMESTAMP: 1633038780000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 33"
+
+# Запись о транзакции
+TX_ID: 1000000000000033
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 3400
+TIMESTAMP: 1633038840000
+STATUS: FAILURE
+DESCRIPTION: "Record number 34"
+
+# Запись о транзакции
+TX_ID: 1000000000000034
+TX_TYPE: TRANSFER
+FROM_USER_ID: 3905656328340714893
+TO_USER_ID: 1096539934895465193
+AMOUNT: 3500
+TIMESTAMP: 1633038900000
+STATUS: PENDING
+DESCRIPTION: "Record number 35"
+
+# Запись о транзакции
+TX_ID: 1000000000000035
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 3600
+TIMESTAMP: 1633038960000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 36"
+
+# Запись о транзакции
+TX_ID: 1000000000000036
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 3317677974065658947
+AMOUNT: 3700
+TIMESTAMP: 1633039020000
+STATUS: FAILURE
+DESCRIPTION: "Record number 37"
+
+# Запись о транзакции
+TX_ID: 1000000000000037
+TX_TYPE: TRANSFER
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 1260904716505397451
+AMOUNT: 3800
+TIMESTAMP: 1633039080000
+STATUS: PENDING
+DESCRIPTION: "Record number 38"
+
+# Запись о транзакции
+TX_ID: 1000000000000038
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 3900
+TIMESTAMP: 1633039140000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 39"
+
+# Запись о транзакции
+TX_ID: 1000000000000039
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 4000
+TIMESTAMP: 1633039200000
+STATUS: FAILURE
+DESCRIPTION: "Record number 40"
+
+# Запись о транзакции
+TX_ID: 1000000000000040
+TX_TYPE: TRANSFER
+FROM_USER_ID: 6549511847913882499
+TO_USER_ID: 824491659835168692
+AMOUNT: 4100
+TIMESTAMP: 1633039260000
+STATUS: PENDING
+DESCRIPTION: "Record number 41"
+
+# Запись о транзакции
+TX_ID: 1000000000000041
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 4200
+TIMESTAMP: 1633039320000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 42"
+
+# Запись о транзакции
+TX_ID: 1000000000000042
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 4300
+TIMESTAMP: 1633039380000
+STATUS: FAILURE
+DESCRIPTION: "Record number 43"
+
+# Запись о транзакции
+TX_ID: 1000000000000043
+TX_TYPE: TRANSFER
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 4367754691116269065
+AMOUNT: 4400
+TIMESTAMP: 1633039440000
+STATUS: PENDING
+DESCRIPTION: "Record number 44"
+
+# Запись о транзакции
+TX_ID: 1000000000000044
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 4500
+TIMESTAMP: 1633039500000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 45"
+
+# Запись о транзакции
+TX_ID: 1000000000000045
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 4600
+TIMESTAMP: 1633039560000
+STATUS: FAILURE
+DESCRIPTION: "Record number 46"
+
+# Запись о транзакции
+TX_ID: 1000000000000046
+TX_TYPE: TRANSFER
+FROM_USER_ID: 7846984624886789445
+TO_USER_ID: 9223372036854775807
+AMOUNT: 4700
+TIMESTAMP: 1633039620000
+STATUS: PENDING
+DESCRIPTION: "Record number 47"
+
+# Запись о транзакции
+TX_ID: 1000000000000047
+TX_TYPE: WITHDRAWAL
+FROM_USER_ID: 9223372036854775807
+TO_USER_ID: 0
+AMOUNT: 4800
+TIMESTAMP: 1633039680000
+STATUS: SUCCESS
+DESCRIPTION: "Record number 48"
+
+# Запись о транзакции
+TX_ID: 1000000000000048
+TX_TYPE: DEPOSIT
+FROM_USER_ID: 0
+TO_USER_ID: 9223372036854775807
+AMOUNT: 4900
+TIMESTAMP: 1633039740000
+STATUS: FAILURE
+DESCRIPTION: "Record number 49"
+

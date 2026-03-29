@@ -6,14 +6,27 @@ pub enum ParserError {
     // TODO: и в других местах можно добавить доп.информацию
     CsvWrongTransactionFormat(String),
     CsvTxWriteError,
+    
     BinTxWriteError,
     BinTxReadError,
     BinWrongMagicEncountered,
     BinReadLessThanBody,
     BinReadDescLenIsExcessive,
     BinReadNonUtf8Symbols,
+
     TextLineReadError,
     TextTxWriteError,
+    TextTxReadError,
+    TextMissingField,
+    TextMissingFieldValue,
+    TextWrongFieldValue,
+    TextWrongLineFormat(String),
+    TextMissingRequiredFields,
+    // Для сравнения, не очень хорошо, наверное, но пока положу сюда
+    ReportLengthsAreNotEqual(usize, usize),
+    NonEqualTransactionFound(String, String),
+    // Не очень хорошо, лучше переделать с Option<Transaction>
+    EOFEncountered,
 }
 
 // Для вывода в виде строки
@@ -32,6 +45,15 @@ impl Display for ParserError {
             ParserError::BinReadNonUtf8Symbols     => write!(f, "Встречены не UTF-8 символы"),
             ParserError::TextLineReadError         => write!(f, "Ошибка чтения текстовой строки"),
             ParserError::TextTxWriteError          => write!(f, "Ошибка записи текстовой строки"),
+            ParserError::TextTxReadError           => write!(f, "Ошибка чтения текстовой строки"),
+            ParserError::TextMissingField          => write!(f, "Отсутствует поле"),
+            ParserError::TextMissingFieldValue     => write!(f, "Отсутствует значение"),
+            ParserError::TextWrongFieldValue       => write!(f, "Ошибка парсинга значения"),
+            ParserError::TextWrongLineFormat(cur_line) => write!(f, "Неверный формат строки: {}", cur_line),
+            ParserError::TextMissingRequiredFields => write!(f, "Не все поля присутствуют в транзакции"),
+            ParserError::ReportLengthsAreNotEqual(rep1_len, rep2_len)               => write!(f, "Разные длины полученных отчётов: {} и {}", rep1_len, rep2_len),
+            ParserError::NonEqualTransactionFound(source_tx, compared_tx) => write!(f, "Найдены отличающиеся транзакции:\n Исходный отчёт: \n{} Сравниваемый отчёт: \n{}", source_tx, compared_tx),
+            ParserError::EOFEncountered => write!(f, "Конец файла"),
         }
     }
 }

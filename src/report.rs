@@ -1,14 +1,10 @@
-use byteorder::{ByteOrder, BigEndian};
-
 use std::io::{BufRead, BufReader};
-use std::mem;
-use std::io::ErrorKind;
-use std::collections::HashMap;
 
-use crate::transaction::{BinTransactionHeader, BinTransactionBodyFixed, Transaction, TransactionStatus, TransactionType};
 use crate::csv_format::CsvFormatIO;
 use crate::text_format::TextFormatIO;
 use crate::bin_format::BinFormatIO;
+
+use crate::transaction::{Transaction, TransactionStatus, TransactionType};
 use crate::error::ParserError;
 
 // Хранение отчёта в виде вектора транзакций
@@ -66,199 +62,37 @@ impl Report {
         &mut self.transactions
     }
 
-    fn parse_u64_with_warning(in_str: &str, default_value: u64) -> u64 {
-        match in_str.parse::<u64>() {
-            Ok(parsed) => parsed,
-            Err(_) => {
-                eprintln!("Значение не распарсилось {}, устанавливается дефолтное {}", in_str, default_value);
-                default_value
+    pub fn compare_full(&self, report_to_compare: &Report) -> Result<(), ParserError> {
+        if self.transactions.len() != report_to_compare.transactions.len() {
+            return Err(ParserError::ReportLengthsAreNotEqual(self.transactions.len(), report_to_compare.transactions.len()))
+        }
+
+        let mut compared_iter = report_to_compare.transactions.iter();
+
+        for source_tx in self.transactions.iter() {
+            if let Some(compared_tx) = compared_iter.next() {
+                if source_tx != compared_tx {
+                    // Переводим в текстовое представление для ошибок
+                    let cur_tx_str = source_tx.as_str();
+                    let compared_tx_str = compared_tx.as_str();
+
+                    return Err(ParserError::NonEqualTransactionFound(cur_tx_str, compared_tx_str));
+                }
             }
-        }
-    }
-
-    // TODO: эту секцию перенести в Transaction (?)
-
-    // Возвращаем Result<Option<Transaction>, ..., поскольку Transaction может быть не получена в случае EOF
-    fn read_one_bin_transaction<R: std::io::Read>(reader: &mut R) -> Result<Option<Transaction>, ParserError> {
-        // Выделяем буфер для header'а
-        let mut header_bytes = [0u8; mem::size_of::<BinTransactionHeader>()];
-
-        const BODY_SIZE_NO_DESCR: usize = mem::size_of::<BinTransactionBodyFixed>();
-
-        // Читаем строго количество байт 
-        match reader.read_exact(&mut header_bytes) {
-            Ok(()) => {},
-            // Для обработки EOF
-            Err(ref e) if e.kind() == ErrorKind::UnexpectedEof => return Ok(None),
-            // Err(e) => return Err(format!("Ошибка чтения header'а: {}", e)),
-            Err(_) => return Err(ParserError::BinTxReadError),
-        }
-
-        // Используем внешний crate byteorder для переводов из сетевого порядка байт и обратно
-        let magic = &header_bytes[0..4];
-        // Для чтения используем слайсы - ключевой момент
-        let record_size = BigEndian::read_u32(&header_bytes[4..8]) as usize;
-        
-        // Проверка на 'YPBN'
-        const EXPECTED_MAGIC: [u8; 4] = [0x59, 0x50, 0x42, 0x4E]; 
-        
-        // Позволяет сравнивать таким образом
-        if magic != EXPECTED_MAGIC {
-            // return Err(format!("Неверное magic: {:?}, должно быть {:?}", magic, EXPECTED_MAGIC));
-            return Err(ParserError::BinWrongMagicEncountered);
-        }
-        
-        // Читаем body
-        let mut body_bytes = vec![0u8; record_size];
-        reader.read_exact(&mut body_bytes)
-            // .map_err(|| format!("Не смогли прочитать {}", e))?;
-            .map_err(|_| ParserError::BinTxReadError)?;
-        
-        // Прочитали меньше чем тело записи
-        if body_bytes.len() < BODY_SIZE_NO_DESCR {
-            // return Err("Слишком короткая запись".to_string());
-            return Err(ParserError::BinReadLessThanBody);
-        }
-        
-        // Извлекаем остальные записи
-        let mut offset = 0;
-        let mut field_len = mem::size_of::<u64>();
-
-        let tx_id = BigEndian::read_u64(&body_bytes[offset..offset + field_len]); 
-        offset += field_len;
-
-        field_len = mem::size_of::<u8>();
-        let tx_type = body_bytes[offset]; 
-        offset += field_len;
-
-        field_len = mem::size_of::<u64>();
-        let from_user_id = BigEndian::read_u64(&body_bytes[offset .. offset + field_len]); 
-        offset += field_len;
-
-        field_len = mem::size_of::<u64>();
-        let to_user_id = BigEndian::read_u64(&body_bytes[offset .. offset + field_len]); 
-        offset += field_len;
-
-        field_len = mem::size_of::<i64>();
-        let amount = BigEndian::read_i64(&body_bytes[offset .. offset + field_len]); 
-        offset += field_len;
-
-        field_len = mem::size_of::<u64>();
-        let timestamp = BigEndian::read_u64(&body_bytes[offset .. offset + field_len]); 
-        offset += field_len;
-
-        field_len = mem::size_of::<u8>();
-        let status = body_bytes[offset]; 
-        offset += field_len;
-
-        field_len = mem::size_of::<u32>();
-        let desc_len = BigEndian::read_u32(&body_bytes[offset .. offset + field_len]) as usize; 
-        offset += field_len;
-                
-        
-        // Проверка на длину Description
-        if offset + desc_len > body_bytes.len() {
-            // return Err("Указана слишком большая длина Description".to_string());
-            return Err(ParserError::BinReadDescLenIsExcessive);
-        }
-        
-        // Забираем description
-        let description_bytes = &body_bytes[offset .. offset + desc_len];
-        
-        // Копируем - плохо
-        // let description = String::from_utf8(description_bytes.to_vec())
-        //     .map_err(|e| format!("Только UTF-8 символы: {}", e))?;
-
-        // Через слайс
-        let description = std::str::from_utf8(description_bytes)
-            // .map_err(|e| format!("Только UTF-8 символы: {}", e))?
-            .map_err(|_| ParserError::BinReadNonUtf8Symbols)?
-            .to_string();
-
-        let new_transaction = Transaction::new(tx_id,
-                                                            TransactionType::from_u8(tx_type),
-                                                            from_user_id,
-                                                            to_user_id,
-                                                            amount as u64,
-                                                            timestamp,
-                                                            TransactionStatus::from_u8(status),
-                                                            description); 
-
-        println!("Прочитанная запись: {:?}", new_transaction);
-
-        Ok(Some(new_transaction))
-
-    }
-
-    fn tx_from_tx_hashmap(tx_hashmap: &HashMap<String, String>) -> Result<Transaction, String> {
-
-        let tx_id = tx_hashmap.get("TX_ID")
-            .ok_or_else(|| "Отсутствует поле TX_ID в записи".to_string())
-            .and_then(|s| s.parse::<u64>().map_err(|e| format!("Не распарсился TX_ID: {}", e)))?;
-        
-        let tx_type = tx_hashmap.get("TX_TYPE")
-            .ok_or_else(|| "Отсутствует поле TX_TYPE в записи".to_string())
-            .and_then(|s: &String| Self::parse_transaction_type(s))?;
-        
-        let from_user_id = tx_hashmap.get("FROM_USER_ID")
-            .ok_or_else(|| "Отсутствует поле FROM_USER_ID в записи".to_string())
-            .and_then(|s| s.parse::<u64>().map_err(|e| format!("Не распарсился FROM_USER_ID: {}", e)))?;
-        
-        let to_user_id = tx_hashmap.get("TO_USER_ID")
-            .ok_or_else(|| "Отсутствует поле TO_USER_ID в записи".to_string())
-            .and_then(|s| s.parse::<u64>().map_err(|e| format!("Не распарсился TO_USER_ID: {}", e)))?;
-        
-        let amount = tx_hashmap.get("AMOUNT")
-            .ok_or_else(|| "Отсутствует поле AMOUNT в записи".to_string())
-            .and_then(|s| s.parse::<u64>().map_err(|e| format!("Не распарсился AMOUNT: {}", e)))?;
-        
-        let timestamp = tx_hashmap.get("TIMESTAMP")
-            .ok_or_else(|| "Отсутствует поле TIMESTAMP в записи".to_string())
-            .and_then(|s| s.parse::<u64>().map_err(|e| format!("Не распарсился TIMESTAMP: {}", e)))?;
-        
-        let status = tx_hashmap.get("STATUS")
-            .ok_or_else(|| "Отсутствует поле STATUS в записи".to_string())
-            .and_then(|s| Self::parse_transaction_status(s))?;
-        
-        let description = tx_hashmap.get("DESCRIPTION")
-            .ok_or_else(|| "Отсутствует поле DESCRIPTION в записи".to_string())
-            .map(|s| s.to_string())?;
-
-            Ok(Transaction::new(
-            tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description
-        ))
-    }
-
-    fn parse_transaction_type(type_str: &str) -> Result<TransactionType, String> {
-        match type_str {
-            "DEPOSIT" => Ok(TransactionType::Deposit),
-            "WITHDRAWAL" => Ok(TransactionType::Withdrawal),
-            "TRANSFER" => Ok(TransactionType::Transfer),
-            _ => Ok(TransactionType::Unknown),
-        }
-    }
-
-    fn parse_transaction_status(status_str: &str) -> Result<TransactionStatus, String> {
-        match status_str {
-            "SUCCESS" => Ok(TransactionStatus::Success),
-            "FAILURE" => Ok(TransactionStatus::Failure),
-            "PENDING" => Ok(TransactionStatus::Pending),
-            _ => Ok(TransactionStatus::Unknown),
-        }
-    }
-
-    // Проверка, что все значения есть в транзакции
-    fn tx_has_all_fields(tx_hash_map: &HashMap<String, String>) -> bool {
-        const REQUIRED_FIELDS: [&str; 8] = ["TX_ID", "TX_TYPE", "FROM_USER_ID", "TO_USER_ID", "AMOUNT", "TIMESTAMP", "STATUS", "DESCRIPTION"];        
-
-        for &required_field in &REQUIRED_FIELDS {
-            if !tx_hash_map.contains_key(required_field) {
-                return false;
+            // В теории не должно быть, длины проверены
+            else {
+                // Пока так
+                unreachable!()
             }
         }
 
-        true
+        Ok(())
     }
+
+    pub fn compare_streaming(&self, _report_to_compare: &Report) -> Result<(), ParserError> {
+        todo!()
+    }
+
 }
 
 
@@ -270,130 +104,31 @@ impl CsvFormatIO<Report> for Report {
     /// Использование:
     ///     let mut report = Report::new_from_text_file(&mut file_to_read)
     ///         {...}
-    fn new_from_csv_file<R: std::io::Read>(reader: R) -> Result<Report, ParserError> {
+    fn new_from_csv_reader<R: std::io::BufRead>(mut reader: R) -> Result<Report, ParserError> {
         // Можно весь прочитать: match reader.read_to_string(&mut buffer) ...
+        // let mut buf_reader = BufReader::new(reader);
 
-        let buf_reader = BufReader::new(reader);
-        // Создаём итератор для пропуска header'а - первой строки 
-        let mut lines = buf_reader.lines();
-        let _header = lines.next();
+        // Первую строку надо пропустить (и можно обработать)
+        let mut header_line = String::new();
+        let _bytes_read = reader.read_line(&mut header_line)
+            .map_err(|_| ParserError::CsvLineReadError)?;
+
+        // // Создаём итератор для пропуска header'а - первой строки 
+        // // let mut lines = buf_reader.lines();
+        // // let _header = lines.next();
 
         // Создаём новый Report и читаем файл построчно
-        let mut new_report = Self::new();
-
-        for cur_line in lines {
-            match cur_line {
-                Ok(ok_line) => {
-                    println!("Прочитанная строка: {}", ok_line);
-                    // Разделяем строку по запятым
-                    let columns: Vec<&str> = ok_line.trim().split(',').collect();
-
-                    // Если два столбца
-                    if columns.len() == 8 {
-
-                        // Получем поля из вектора:
-                        // 1. Transaction ID
-                        let tx_id = Report::parse_u64_with_warning(columns[0], 0);
-
-                        // 2. Transaction Type: сравниваем с &str
-                        let tx_type = match columns[1] {
-                            "DEPOSIT" => TransactionType::Deposit,
-                            "WITHDRAWAL" => TransactionType::Withdrawal,
-                            "TRANSFER" => TransactionType::Transfer,
-                            _ => TransactionType::Unknown
-                        };
-                        
-                        // 3. From User
-                        let from_user_id = Report::parse_u64_with_warning(columns[2], 0);
-                        // 4. To User
-                        let to_user_id = Report::parse_u64_with_warning(columns[3], 0);
-                        // 5. Amount
-                        let amount = Report::parse_u64_with_warning(columns[4], 0);
-                        // 6. Timestamp
-                        let timestamp = Report::parse_u64_with_warning(columns[5], 0);
-
-                        // 7. Status
-                        let status = match columns[6] {
-                            "SUCCESS" => TransactionStatus::Success,
-                            "FAILURE" => TransactionStatus::Failure,
-                            "PENDING" => TransactionStatus::Pending,
-                            _ => TransactionStatus::Unknown,
-                        };
-
-                        // 8. Description
-                        let description = columns[7].to_string();
-
-                        // Добавляем транзакцию в вектор          
-                        new_report.add_transaction(Transaction { tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description });
-
-                    }
-                    else {
-                        // eprintln!("Неверный формат транзакции: {}", ok_line);
-                        return Err(ParserError::CsvWrongTransactionFormat(ok_line));
-                    }
-                },
-                Err(_e) => {
-                    return Err(ParserError::CsvLineReadError);
-                }
-            }
-        }
-
-        // Искусственная ошибка для проверки вызова
-        // Err(ParserError::CsvLineReadError)
-        Ok(new_report)
-    }
-
-    /// Перевод структуры Report в СSV-формата
-    /// Аргументы: <W: std::io::Write>(&mut self, writer: &mut W)
-    /// Результат: Result<(), String>
-    /// Использование:
-    ///     let mut report = Report::new_from_text_file(&mut file_to_read)
-    ///         {...}
-    fn write_to_csv_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), ParserError> {
-        // Собираем все данные в текстовом виде в одну строку с newline'ами
-       let mut out_data = String::new();
-
-        // Бежим по вектору (по ссылке)
-        for cur_tx in &self.transactions {
-            // Разделяем newline'ом записи, всё по классике
-            out_data.push_str(&format!("{},{},{},{},{},{},{},{}\n", cur_tx.tx_id,
-                                                                            cur_tx.tx_type,
-                                                                            cur_tx.from_user_id,
-                                                                            cur_tx.to_user_id,
-                                                                            cur_tx.amount,
-                                                                            cur_tx.timestamp,
-                                                                            cur_tx.status,
-                                                                            cur_tx.description));
-        }
-
-        // Не используем BufWriter, потому что сразу пишем всю строку целиком.
-        // Создаём родительские директории
-        // let file_path = Path::new("aux/")
-        // if let Some(parent) = Path::new(file_path).parent() {
-        //     fs::create_dir_all(parent).unwrap();
-        // }
-        
-        writer.write_all(out_data.as_bytes())
-            .map_err(|_| ParserError::CsvTxWriteError)?;
-
-        Ok(())
-    }
-}
-
-
-/// Реализация трейта для парсинга из Bin-формата в Report и обратно
-impl BinFormatIO<Report> for Report {
-    fn new_from_bin_file<R: std::io::Read>(mut reader: R) -> Result<Report, ParserError> {
-        let mut report = Report::new();
+        let mut report = Self::new();
         
         // Идём по списку, читая по одному
         loop {
-            match Report::read_one_bin_transaction(&mut reader) {
-                Ok(Some(transaction)) => {
-                    report.add_transaction(transaction);
+            match Transaction::new_from_csv_reader(&mut reader) {
+                Ok(new_transaction) => {
+                    report.add_transaction(new_transaction);
                 },
-                Ok(None) => {
+                Err(ParserError::EOFEncountered) => {
                     // EOF => заканчиваем чтение
+                    // TODO: подумать для Streaming'а
                     break;
                 },
                 Err(e) => {
@@ -405,10 +140,54 @@ impl BinFormatIO<Report> for Report {
         Ok(report)
     }
 
-    fn write_to_bin_file<W: std::io::Write>(&mut self, mut writer: &mut W) -> Result<(), ParserError> {
+    /// Перевод структуры Report в СSV-формат
+    /// Аргументы: <W: std::io::Write>(&mut self, writer: &mut W)
+    /// Результат: Result<(), ParserError>
+    /// Использование:
+    ///     let mut report = Report::new_from_text_reader(&mut file_to_read)
+    ///         {...}
+    fn write_as_csv_to_writer<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), ParserError> {
+
+        // Бежим по вектору (по мутабельным ссылкам)
+        for cur_tx in self.transactions.iter_mut() {
+            cur_tx.write_as_csv_to_writer(writer)?;
+        }
+
+        Ok(())
+    }
+}
+
+
+/// Реализация трейта для парсинга из Bin-формата в Report и обратно
+impl BinFormatIO<Report> for Report {
+    fn new_from_bin_reader<R: std::io::Read>(mut reader: R) -> Result<Report, ParserError> {
+        let mut report = Self::new();
         
-        for transaction in &self.transactions {
-            transaction.write_to_binary_writer(&mut writer)?;
+        // Идём по списку, читая по одному
+        loop {
+            match Transaction::new_from_bin_reader(&mut reader) {
+                Ok(new_transaction) => {
+                    report.add_transaction(new_transaction);
+                },
+                Err(ParserError::EOFEncountered) => {
+                    // EOF => заканчиваем чтение
+                    // TODO: подумать для Streaming'а
+                    break;
+                },
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
+        
+        Ok(report)
+    }
+
+    fn write_as_bin_to_writer<W: std::io::Write>(&mut self, mut writer: &mut W) -> Result<(), ParserError> {
+
+        for cur_tx in self.transactions.iter_mut() {
+            // Теперь пишется транзакцией 
+            cur_tx.write_as_bin_to_writer(&mut writer)?;
 
             // Запись каждой транзакции в случае буферизированного вывода
             // writer.flush()
@@ -416,8 +195,8 @@ impl BinFormatIO<Report> for Report {
         }
         
         // Сразу все транзакции (или пока буфер не заполнится?)
-        writer.flush()
-            .map_err(|_| ParserError::BinTxWriteError)?;
+        // writer.flush()
+        //     .map_err(|_| ParserError::BinTxWriteError)?;
         
         Ok(())
     }
@@ -425,90 +204,36 @@ impl BinFormatIO<Report> for Report {
 
 /// Реализация трейта для парсинга из текстового формата в Report и обратно
 impl TextFormatIO<Report> for Report {
-    fn new_from_text_file<R: std::io::Read>(reader:  R) -> Result<Report, ParserError> {
+    fn new_from_text_reader<R: std::io::Read>(mut reader:  R) -> Result<Report, ParserError> {
+        // Чтение всего
         // match reader.read_to_string(&mut buffer) {
 
-        let buf_reader = BufReader::new(reader);
-        let lines = buf_reader.lines();
-
-        // Создаём новый Report и читаем файл построчно
-        let mut new_report = Self::new();
-
-        // HashMap для однократности ключа
-        let mut cur_tx_hashmap = HashMap::<String, String>::new();
-
-        for cur_line in lines {
-            match cur_line {
-                Ok(ok_line) => {
-                    println!("Прочитанная строка: {}", ok_line);
-
-                    // Пропускаем комментарии
-                    if ok_line.starts_with("#") == true {
-                        continue;
-                    }
-                    // Или пустая строка (должна быть одна?)
-                    else if ok_line.is_empty() {
-                        if Report::tx_has_all_fields(&cur_tx_hashmap) {
-                            if let Ok(transaction) = Report::tx_from_tx_hashmap(&cur_tx_hashmap) {
-                                new_report.add_transaction(transaction);
-                                cur_tx_hashmap.clear();
-                            }
-                            else {
-                                eprintln!("Не все поля распарсились");
-                                cur_tx_hashmap.clear();
-                            }
-                        }
-                        else {
-                            eprintln!("В транзакции не все поля");
-                            cur_tx_hashmap.clear();
-                        }
-
-                        continue;
-                    } 
-                    // Обработка записи - чуть грубовато, разделение по ": " на два токена
-                    else {
-                        let line_tokens: Vec<&str> = ok_line.trim().split(": ").collect();
-                        
-                        if line_tokens.len() != 2 {
-                            continue;
-                        }
-
-                        // TODO: проверить, что уже было значение
-                        cur_tx_hashmap.insert(line_tokens[0].to_string(), line_tokens[1].to_string());
-                    }
+        let mut report = Self::new();
+        
+        // Идём по списку, читая по одному
+        loop {
+            match Transaction::new_from_text_reader(&mut reader) {
+                Ok(new_transaction) => {
+                    report.add_transaction(new_transaction);
                 },
-                Err(_) => {
-                    return Err(ParserError::TextLineReadError);
+                Err(ParserError::EOFEncountered) => {
+                    // EOF => заканчиваем чтение
+                    // TODO: подумать для Streaming'а
+                    break;
+                },
+                Err(e) => {
+                    return Err(e);
                 }
             }
         }
-
-        // Err("Искусственная ошибка для проверки вызова".to_string())
-        Ok(new_report)
+        
+        Ok(report)
     }
 
-    fn write_to_text_file<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), ParserError> {
-        // Собираем все данные в текстовом виде в одну строку с newline'ами
-       let mut out_data = String::new();
-
+    fn write_as_text_to_writer<W: std::io::Write>(&mut self, writer: &mut W) -> Result<(), ParserError> {
         // Бежим по вектору (по ссылке)
-        for cur_tx in &self.transactions {
-            // Разделяем newline'ом записи
-            out_data.push_str(&format!("# Запись о транзакции\n"));
-            out_data.push_str(&format!("TX_ID: {}\n", cur_tx.tx_id));
-            out_data.push_str(&format!("TX_TYPE: {}\n", cur_tx.tx_type));
-            out_data.push_str(&format!("FROM_USER_ID: {}\n", cur_tx.from_user_id));
-            out_data.push_str(&format!("TO_USER_ID: {}\n", cur_tx.to_user_id));
-            out_data.push_str(&format!("AMOUNT: {}\n", cur_tx.amount));
-            out_data.push_str(&format!("TIMESTAMP: {}\n", cur_tx.timestamp));
-            out_data.push_str(&format!("STATUS: {}\n", cur_tx.status));
-            // Два newline в конце для разделения записей
-            out_data.push_str(&format!("DESCRIPTION: {}\n\n", cur_tx.description));
-        }
-
-        if let Err(_) = writer.write_all(out_data.as_bytes()) {
-            // .map_err(|e| FormatError::IoError(e.to_string()))?;
-            return Err(ParserError::TextTxWriteError);
+        for cur_tx in self.transactions.iter_mut() {
+            cur_tx.write_as_text_to_writer(writer)?;
         }
 
         Ok(())
