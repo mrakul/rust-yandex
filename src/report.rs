@@ -23,7 +23,7 @@ impl Report {
         }
     }
     
-    fn add_transaction(&mut self, tx_to_add: Transaction) -> () {
+    fn add_transaction(&mut self, tx_to_add: Transaction) {
         self.transactions.push(tx_to_add)
     }
 

@@ -7,6 +7,9 @@ pub enum ParserError {
     // TODO: и в других местах можно добавить доп.информацию
     CsvWrongTransactionFormat(String),
     CsvTxWriteError,
+    CsvU64IsNotParsed(String),
+    CsvUnknownTxType(String),
+    CsvUnknownTxStatus(String),
     
     BinTxWriteError,
     BinTxReadError,
@@ -38,6 +41,10 @@ impl Display for ParserError {
             ParserError::CsvLineReadError          => write!(f, "Ошибка чтения csv-строки"),
             ParserError::CsvWrongTransactionFormat(tx_line) => write!(f, "Встречена транзакция с неверным форматом {}", tx_line),
             ParserError::CsvTxWriteError           => write!(f, "Ошибка записи csv-строки"),
+            ParserError::CsvU64IsNotParsed(in_str)  => write!(f, "Поле значения не распарсено {}", in_str),
+            ParserError::CsvUnknownTxStatus(in_str)  => write!(f, "Поле статуса не распарсено {}", in_str),
+            ParserError::CsvUnknownTxType(in_str)  => write!(f, "Поле типа не распарсено {}", in_str),
+
             ParserError::BinTxWriteError           => write!(f, "Ошибка записи bin-данных"),
             ParserError::BinTxReadError            => write!(f, "Ошибка чтения bin-данных"),
             // TODO: продолжить обработку после следующего MAGIC

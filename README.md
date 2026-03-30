@@ -1,7 +1,6 @@
  # Библиотека parser
  
- Библиотека для парсинга/сериализации/десериализации финансовых данных Yandex Practicum в несколько форматов (CSV, текстовый, бинарный
- )
+ Библиотека для парсинга/сериализации/десериализации финансовых данных Yandex Practicum в несколько форматов: CSV, текстовый, бинарный
 
  ## Консольные утилиты
 - converter:
@@ -46,7 +45,7 @@
  - `tx.write_as_text_to_writer<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ParserError>`
  - `tx.write_as_bin_to_writer<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ParserError>`
  
- ### Возможные ошибки описаны в error.rs (по возможности, понятно)
+ ### Возможные ошибки описаны в error.rs
  
  ### Пример использования отчёта
  
@@ -86,6 +85,8 @@
         Ok(()) => println!("Записано в файл: {:?}", csv_file_to_write_path),
         Err(error) => println!("Ошибка записи в файл {:?}: {}", csv_file_to_write_path, error),
     }
+
+Для подробного описания функций см.модуль report.rs
  ```
  Используемые функции:
  - `Report::new_from_csv_reader<R: std::io::Read>(reader: &mut R) -> Result<InternalType, ParserError>` 
@@ -94,7 +95,5 @@
  - `report.write_as_csv_to_writer<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ParserError>`
  - `report.write_as_text_to_writer<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ParserError>`
  - `report.write_as_bin_to_writer<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ParserError>`
-
- Для подробного описания функций см.модуль report.rs
  
  

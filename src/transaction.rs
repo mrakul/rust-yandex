@@ -48,40 +48,40 @@ impl Transaction {
 // Отдельная структура для представления транзакции в бинарном виде без alignment'ов
 // (пока нужна только для size_of(), если будут добавляться поля)
 
-// Header отдельно
-#[repr(packed)]
+// Header отдельно (c packed пока надо разбираться)
+#[repr(Rust, packed)]
 #[derive(Debug)]
 pub struct BinTransactionHeader {
     // 'YPBN' = [0x59, 0x50, 0x42, 0x4E]
-    magic: [u8; 4],    
+    _magic: [u8; 4],    
     // Прямой порядок байт?
-    record_size: u32,
+    _record_size: u32,
 }
-#[repr(packed)]
+#[repr(Rust, packed)]
 pub struct BinTransactionBodyFixed {
-    tx_id: u64, 
-    tx_type: u8,  
-    from_user_id: u64,
-    to_user_id: u64,
+    _tx_id: u64, 
+    _tx_type: u8,  
+    _from_user_id: u64,
+    _to_user_id: u64,
     // | `AMOUNT` | 8 байт | знаковое 64-битное | Сумма в наименьшей денежной единице (центах). 
     // Положительное значение для зачислений, отрицательное для списаний. |
-    amount: i64,
-    timestamp: u64,
-    status: u8,
-    desc_len: u32,
+    _amount: i64,
+    _timestamp: u64,
+    _status: u8,
+    _desc_len: u32,
     // TODO: спросить про возможность иметь указатель (?) переменой aka Flexible array member
 }
 
 
 // В таком случае packed может не сработать, насколько понял, пока лучше не использовать
-#[repr(packed)]  
-pub struct BinaryTransaction {
+#[repr(Rust, packed)]
+pub struct _BinaryTransaction {
     pub header: BinTransactionHeader,
     pub body:   BinTransactionBodyFixed,
 }
 
-impl BinaryTransaction {
-    pub fn size_without_description() -> usize {
+impl _BinaryTransaction {
+    pub fn _size_without_description() -> usize {
         mem::size_of::<BinTransactionHeader>() +
         mem::size_of::<BinTransactionBodyFixed>()
     }
@@ -358,47 +358,29 @@ impl CsvFormatIO<Transaction> for Transaction {
         if columns.len() == 8 {
 
             // Получем поля из вектора
-            // Примечание:  сделал с дефолтными значениями грубовато, можно под ошибки поправить
-
             // 1. Transaction ID
-            let tx_id = Transaction::parse_u64_with_warning(columns[0], 0);
-
+            let tx_id = Transaction::parse_u64(columns[0])?;
             // 2. Transaction Type: сравниваем с &str
-            let tx_type = match columns[1] {
-                "DEPOSIT" => TransactionType::Deposit,
-                "WITHDRAWAL" => TransactionType::Withdrawal,
-                "TRANSFER" => TransactionType::Transfer,
-                _ => TransactionType::Unknown
-            };
-            
+            let tx_type= Transaction::parse_tx_type(columns[1])?;
             // 3. From User
-            let from_user_id = Transaction::parse_u64_with_warning(columns[2], 0);
+            let from_user_id = Transaction::parse_u64(columns[2])?;
             // 4. To User
-            let to_user_id = Transaction::parse_u64_with_warning(columns[3], 0);
+            let to_user_id = Transaction::parse_u64(columns[3])?;
             // 5. Amount
-            let amount = Transaction::parse_u64_with_warning(columns[4], 0);
+            let amount = Transaction::parse_u64(columns[4])?;
             // 6. Timestamp
-            let timestamp = Transaction::parse_u64_with_warning(columns[5], 0);
-
+            let timestamp = Transaction::parse_u64(columns[5])?;
             // 7. Status
-            let status = match columns[6] {
-                "SUCCESS" => TransactionStatus::Success,
-                "FAILURE" => TransactionStatus::Failure,
-                "PENDING" => TransactionStatus::Pending,
-                _ => TransactionStatus::Unknown,
-            };
-
+            let status= Transaction::parse_tx_status(columns[6])?;         
             // 8. Description
             let description = columns[7].to_string();
 
             // Всё ок, возвращаем транзакцию
-            return Ok(Transaction{tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description});
-
-
+            Ok(Transaction{tx_id, tx_type, from_user_id, to_user_id, amount, timestamp, status, description})
         }
         else {
             // eprintln!("Неверный формат транзакции: {}", ok_line);
-            return Err(ParserError::CsvWrongTransactionFormat(line_from_buffer));
+            Err(ParserError::CsvWrongTransactionFormat(line_from_buffer))
         }
 
     }
@@ -415,8 +397,6 @@ impl CsvFormatIO<Transaction> for Transaction {
                                                                         self.timestamp,
                                                                         self.status,
                                                                         self.description));
-
-        // (?) Не используем BufWriter, потому что сразу пишем всю строку целиком 
 
         writer.write_all(out_data.as_bytes())
             .map_err(|_| ParserError::CsvTxWriteError)?;
@@ -469,7 +449,7 @@ impl TextFormatIO<Transaction> for Transaction {
                     return Err(ParserError::TextWrongLineFormat(line_from_buffer))
                 }
 
-                if Transaction::is_acceptable_field(line_tokens[0]) == false {
+                if !Transaction::is_acceptable_field(line_tokens[0]) {
                     return Err(ParserError::TextWrongFieldName(line_tokens[0].to_string()));
                 }
                 
@@ -524,7 +504,7 @@ impl Transaction {
         // Два newline в конце для разделения записей
         tx_as_str.push_str(&format!("DESCRIPTION: {}\n\n", self.description));
 
-        return tx_as_str;
+        tx_as_str
     }
 
     
@@ -627,7 +607,7 @@ impl Transaction {
         false
     }
 
-    fn parse_u64_with_warning(in_str: &str, default_value: u64) -> u64 {
+    fn _parse_u64_with_warning(in_str: &str, default_value: u64) -> u64 {
         match in_str.parse::<u64>() {
             Ok(parsed) => parsed,
             Err(_) => {
@@ -636,7 +616,38 @@ impl Transaction {
             }
         }
     }
+
+    fn parse_u64(in_str: &str) -> Result<u64, ParserError> {
+        match in_str.parse::<u64>() {
+            Ok(parsed) => Ok(parsed),
+            Err(_) => {
+                // eprintln!("Значение не распарсилось {}");
+                Err(ParserError::CsvU64IsNotParsed(in_str.to_string()))
+            }
+        }
+    }
+
+    // TODO: немного лишнего вышло, надо парсинг полей вынести в общие ошибки, пока оставляю
+    // (но здесь с передачей самого поля)
+    fn parse_tx_type(in_str: &str) -> Result<TransactionType, ParserError> {
+        match in_str {
+            "DEPOSIT" => Ok(TransactionType::Deposit),
+            "WITHDRAWAL" => Ok(TransactionType::Withdrawal),
+            "TRANSFER" => Ok(TransactionType::Transfer),
+            _ => Err(ParserError::CsvUnknownTxType(in_str.to_string()))
+        }
+    }
+
+    fn parse_tx_status(in_str: &str) -> Result<TransactionStatus, ParserError> {
+        match in_str {
+            "SUCCESS" => Ok(TransactionStatus::Success),
+            "FAILURE" => Ok(TransactionStatus::Failure),
+            "PENDING" => Ok(TransactionStatus::Pending),
+            _ => Err(ParserError::CsvUnknownTxStatus(in_str.to_string()))
+        }
+    }
 }
+
 
 //*** Секция тестов для Transaction ***/
 
@@ -675,6 +686,8 @@ FROM_USER_ID: 9223372036854775807
 TO_USER_ID: 9223372036854775807";
 
     const CSV_CONTENT_STR_BAD: &str = "1,DEPOSIT,100,200,1000,123456789,SUCCESS,Test transaction,,,,,,,,,,,,,,,,,,,,,,,,,,,\n";
+    const CSV_CONTENT_STR_BAD_2: &str = "1,UNKONWN OPERATION,100,200,1000,123456789,SUCCESS,Test transaction\n";
+
     const TEXT_CONTENT_STR_BAD: &str = " 
 WRONG FIELD NAME: \"Record number 2\"
 TIMESTAMP: 1633036920000
@@ -859,6 +872,14 @@ TO_USER_ID: 9223372036854775807";
         assert_eq!(Transaction::new_from_csv_reader(&mut csv_cursor), Err(ParserError::CsvWrongTransactionFormat(CSV_CONTENT_STR_BAD.to_string())));
     }
 
+    /// Неверный формат записи CSV, возвращается плохая строка
+    #[test]
+    fn test_csv_wrong_tx_type() {
+        let mut csv_cursor = std::io::Cursor::new(CSV_CONTENT_STR_BAD_2.to_string());
+        
+        assert_eq!(Transaction::new_from_csv_reader(&mut csv_cursor), Err(ParserError::CsvUnknownTxType("UNKONWN OPERATION".to_string())));
+    }
+
     /// Текст: неверное имя поля
     #[test]
     fn test_text_wrong_record_key() {
@@ -876,4 +897,6 @@ TO_USER_ID: 9223372036854775807";
         
         assert_eq!(Transaction::new_from_text_reader(&mut txt_cursor), Err(ParserError::TextWrongLineFormat("DESCRIPTION: \"Record number 2\" DESCRIPTION 2: \"Rust is a fantastic language\"\n".to_string())));
     }
+
+
 }
