@@ -60,6 +60,8 @@ cargo run --example cli -- deposit Alice 300
 
 # Запуск тестов
 cargo test
+# Чтобы print'ы выводились в любом случае
+cargo test -- --no-capture
 
 # Сгенерировать ассемблер
 rustc --crate-type bin ./balance.rs -O --emit=asm -o balance_asm.s
