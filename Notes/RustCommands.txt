@@ -76,10 +76,24 @@ cargo run --bin cli_utils -- arg1 arg2
 # Собрать с флагом --release (можно ещё --debug)
 cargo run --release --bin cli_utils
 
+# Запуск без дефолтных фич
+cargo run --example demo_features --no-default-features
+
+# Но включив фичу sqlite
+cargo run --example demo_features --no-default-features --features sqlite
 
 # Для отладки макросов можно использовать cargo expand. Его нужно установить:
 1. cargo install cargo-expand
 2. cargo expand --bin macros_example
+
+# Включаем логирование и устанавливаем уровень
+RUST_LOG=info cargo run --example demo_all_features --features logging
+
+# Подробное логирование
+RUST_LOG=debug cargo run --example demo_all_features --features logging
+
+# Только предупреждения и ошибки
+RUST_LOG=warn cargo run --example demo_all_features --features logging 
 
 # Перезагрузить Rust Analyzer:
 Restart rust-analyzer: This is often the simplest fix. 
