@@ -1,6 +1,7 @@
 pub mod metrics;
 pub mod receiver;
 pub mod sender;
+pub mod logger;
 
 pub use metrics::RoomMetrics;
 pub use receiver::MetricsReceiver;

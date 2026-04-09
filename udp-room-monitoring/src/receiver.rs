@@ -15,6 +15,7 @@ impl MetricsReceiver {
     pub fn new(bind_addr: &str) -> Result<Self, std::io::Error> {
         let socket = UdpSocket::bind(bind_addr)?;
         println!("Ресивер запущен на {}", bind_addr);
+        
         Ok(Self { socket })
     }
 
@@ -106,3 +107,64 @@ impl MetricsReceiver {
         Ok(())
     }
 }
+
+
+use std::net::SocketAddr;
+
+/// Общий интерфейс для всех приёмников метрик
+pub trait Receiver: Send + Sync {
+    fn start_with_channel(
+        self: Box<Self>,
+    ) -> (
+        thread::JoinHandle<()>,
+        mpsc::Receiver<(RoomMetrics, SocketAddr)>,
+    );
+}
+
+impl Receiver for MetricsReceiver {
+    fn start_with_channel(
+        self: Box<Self>,
+    ) -> (
+        thread::JoinHandle<()>,
+        mpsc::Receiver<(RoomMetrics, std::net::SocketAddr)>,
+    ) {
+        // просто вызываем уже реализованный метод
+        MetricsReceiver::start_with_channel(*self)
+    }
+}
+
+use std::time::Duration;
+
+pub struct MockReceiver;
+
+impl Receiver for MockReceiver {
+    fn start_with_channel(
+        self: Box<Self>,
+    ) -> (
+        thread::JoinHandle<()>,
+        mpsc::Receiver<(RoomMetrics, std::net::SocketAddr)>,
+    ) {
+        let (tx, rx) = mpsc::channel();
+
+        let handle = thread::spawn(move || {
+            for i in 0..5 {
+                let metrics = RoomMetrics {
+                    temperature: 22.5 + i as f32,
+                    humidity: 45.0,
+                    pressure: 1013.0,
+                    door_open: i % 2 == 0,
+                    timestamp: std::time::SystemTime::now()
+                                                    .duration_since(std::time::UNIX_EPOCH)
+                                                    .unwrap()
+                                                    .as_secs() as u64,
+                    light_level: 0.8, // Освещённость 
+                };
+                tx.send((metrics, "127.0.0.1:9999".parse().unwrap()))
+                    .unwrap();
+                thread::sleep(Duration::from_secs(1));
+            }
+        });
+
+        (handle, rx)
+    }
+} 
