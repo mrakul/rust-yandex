@@ -1,11 +1,13 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-
+use std::net::SocketAddr;
 use rand::Rng;
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::RwLock;
+use std::time::Duration;
+use crossbeam_channel as channel;
 
 type Company = String;
 
@@ -52,19 +54,25 @@ impl StockQuote {
 }
 
 pub struct QuoteGenerator {
-    // Храним цены в мап'е: название -> текущая цена
-
-    // Примечание: вследствие этого все методы надо поменять на &self для внутренней мутабельности,
+    // Примечание: вследствие Arc все методы надо поменять на &self для внутренней мутабельности,
     // Arc реализует DeRef, поэтому вызов функций происходит на &self
-    stock_prices_rwlocked: RwLock<HashMap<Company, f64>>
-    // prices_mutex: RwLock<HashMap<Company, f64>>,
+    stock_prices_rw: RwLock<HashMap<Company, f64>>,
+    udp_streamer_channels_rw: RwLock<HashMap<SocketAddr, UdpStreamSubscriber>>,
 }
+
+// Отдельные UDP-потоки принимают данные с подпиской, предварительно зарегистрировавшись в QuoteGenerator'е
+pub struct UdpStreamSubscriber {
+    pub to_streaming_thread_channel: channel::Sender<StockQuote>,
+    pub tickers: Vec<String>,
+}
+
 
 impl QuoteGenerator {
     pub fn new() -> Self {
         Self {
             // stock_prices: HashMap::new(),
-            stock_prices_rwlocked: RwLock::new(HashMap::new()),
+            stock_prices_rw: RwLock::new(HashMap::new()),
+            udp_streamer_channels_rw: RwLock::new(HashMap::new())
         }
     }
 
@@ -76,7 +84,7 @@ impl QuoteGenerator {
         let mut num_of_companies = 0;
 
         // Ставим lock на время наполнения
-        let mut stock_prices = self.stock_prices_rwlocked.write().unwrap();
+        let mut stock_prices = self.stock_prices_rw.write().unwrap();
 
         // Особо не проверяю формат и наличие ячейки в HashMap
         for line in reader.lines() {
@@ -94,7 +102,7 @@ impl QuoteGenerator {
     // Добавить вручную компании
     pub fn add_ticker(&self, ticker: &str, initial_price: f64) {
         // Lock на запись
-        let mut stock_prices = self.stock_prices_rwlocked.write().unwrap();
+        let mut stock_prices = self.stock_prices_rw.write().unwrap();
         stock_prices.insert(ticker.to_string(), initial_price);
     }
 
@@ -102,7 +110,7 @@ impl QuoteGenerator {
     // Изменить цены
     pub fn update_prices(&self) {
         // Lock на запись
-        let mut stock_prices = self.stock_prices_rwlocked.write().unwrap();
+        let mut stock_prices = self.stock_prices_rw.write().unwrap();
 
         for company_stock_price in stock_prices.values_mut() {            
                 let mut rand_gen = rand::rng();
@@ -117,7 +125,7 @@ impl QuoteGenerator {
     /// Получить текущее значение цены
     pub fn get_current_price(&self, ticker: &str) -> Option<f64> {
         // Lock на чтение
-        let stock_prices = self.stock_prices_rwlocked.read().unwrap();
+        let stock_prices = self.stock_prices_rw.read().unwrap();
         stock_prices.get(ticker).copied()
     }
     
@@ -140,4 +148,68 @@ impl QuoteGenerator {
             timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
         })
     }
+
+
+    /// Регистрация "подписчиков" (UDP-стримеров) с указанными тикерами
+    pub fn register_udp_streaming(&self, client_addr: SocketAddr, tickers_subscribe: Vec<String>) -> Result<channel::Receiver<StockQuote>, String> {
+        // Создаём канал для UDP-потока-стримера
+        let (send_to_client_channel, receive_from_gen_channel) = channel::unbounded::<StockQuote>();
+        
+        // Лочим зарегистрированных на запись
+        let mut channels = self.udp_streamer_channels_rw.write().unwrap();
+
+        // Сохраняем канал для отправки клиенту 
+        channels.insert(client_addr, UdpStreamSubscriber {
+            to_streaming_thread_channel: send_to_client_channel,
+            tickers: tickers_subscribe.clone(),
+        });
+        
+        println!("👤 UDP-стрим-поток для {} зарегистрировался с тикерами {:?}", client_addr, tickers_subscribe);
+        
+        Ok(receive_from_gen_channel)
+    }
+    
+    // NEW: Send quote to specific client (if they subscribe to this ticker)
+    pub fn send_quote_to_client(&self, client_addr: &SocketAddr, quote: StockQuote) -> Result<(), String> {
+        let channels = self.udp_streamer_channels_rw.read().unwrap();
+        
+        if let Some(client_channel) = channels.get(client_addr) {
+            // Check if client subscribes to this ticker
+            if client_channel.tickers.contains(&quote.ticker) {
+                client_channel.to_streaming_thread_channel.send(quote)
+                    .map_err(|e| format!("Failed to send quote: {}", e))?;
+                Ok(())
+            } else {
+                Err("Client doesn't subscribe to this ticker".to_string())
+            }
+        } else {
+            Err("Client not found".to_string())
+        }
+    }
+    
+    // Послать каждому подписчику котировки тикеров, на которые он подписан
+    pub fn broadcast_quote(&self, quote: &StockQuote) {
+        let channels = self.udp_streamer_channels_rw.read().unwrap();
+        
+        for (_, client_channel) in channels.iter() {
+            if client_channel.tickers.contains(&quote.ticker) {
+                let _ = client_channel.to_streaming_thread_channel.send(quote.clone());
+            }
+        }
+    }
+    
+    // Однократно послать котировки, на которые подписаны (основной цикл при создании потока)
+    pub fn broadcast_quotes_to_subscribers(&self) {
+        let stock_prices = self.stock_prices_rw.read().unwrap();
+
+        for (ticker, _) in stock_prices.iter() {
+
+            // TODO: обработать ошибку
+            let quote = Self::generate_quote(&self, ticker).unwrap();
+            self.broadcast_quote(&quote);
+        }
+
+        std::thread::sleep(Duration::from_millis(100));
+    }
+
 } 
