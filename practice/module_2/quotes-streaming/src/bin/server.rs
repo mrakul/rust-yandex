@@ -23,7 +23,7 @@ fn main() -> std::io::Result<()> {
     // Запускаем поток генератора цен до парсинга команд
     std::thread::spawn(move || -> std::io::Result<()> {
         let loaded_count = quotes_generator_clone.load_tickers_from_file(Path::new("aux/tickers.txt"))?;
-        println!("Загружено {} компаний: \n", loaded_count);
+        println!("Загружено {} компаний для стриминга ...", loaded_count);
 
         loop {
             quotes_generator_clone.update_prices();
@@ -84,14 +84,18 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
     //     }
     // };
 
-    let client_addr = stream.peer_addr().expect("failed to get client address");
-    let server_addr = stream.local_addr().expect("failed to get server address");
+    // TODO: обработать ошибки
+    let client_addr = stream.peer_addr().expect("Не удалось получить адрес клиента из сокета");
+    let server_addr = stream.local_addr().expect("Не удалось получить адрес сервера из сокета");
 
-    // клонируем stream: один экземпляр для чтения (обёрнут в BufReader), другой — для записи
-    let mut to_client_stream = stream.try_clone().expect("failed to clone stream");
+    // Клонируем stream: один экземпляр для чтения (обёрнут в BufReader), другой — для записи (для двух буферов под капотом)
+    let mut to_client_stream = stream.try_clone().expect("Ошибка клонирования стрима");
     let mut to_server_stream = BufReader::new(stream);
 
-    let welcome_string = format!("Вы подключились к серверу: {} => {} \nВведите команду: STREAM, PING \n> ",
+    // Выводим серверу и отправляем клиенту
+    println!("Подключение к серверу: {} => {}", client_addr, server_addr);
+
+    let welcome_string = format!("Вы подключились к серверу: {} => {} \nДля начала стриминга введите команду: STREAM udp://host:port TICKER1,TICKER2\n",
                                                                      client_addr, server_addr
     );
     
@@ -103,12 +107,12 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
     let _ = to_client_stream.flush();
 
     let mut command_from_client = String::new();
-    let mut response = String::new();
+    // let mut response = String::new();
 
     loop {
         // Очищаем входную строку и главное - response        
         command_from_client.clear();
-        response.clear();
+        // response.clear();
 
         // read_line ждёт '\n' — nc отправляет строку по нажатию Enter
         match to_server_stream.read_line(&mut command_from_client) {
@@ -122,10 +126,8 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                 // Пустой ввод
                 let command_from_client = command_from_client.trim();
                 if command_from_client.is_empty() {
-                    response = "Вы ничего не ввели. Введите команду в формате: STREAM udp://host:port TICKER1,TICKER2\n>".to_string();
-                    let _ = to_client_stream.write_all(response.as_bytes());
-                    let _ = to_client_stream.flush();
-
+                    let error_msg = "Вы ничего не ввели. Введите команду в формате: STREAM udp://host:port TICKER1,TICKER2\n".to_string();
+                    let _ = to_client_stream.write_all(error_msg.as_bytes());
                     let _ = to_client_stream.flush();
                     continue;
                 }
@@ -133,61 +135,64 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                 match StreamCommand::parse(&command_from_client) {
                     Ok(stream_command_ok ) => {
                         // Создание нового соединения UDP
-                        // 👇 Handle errors here, before spawning thread
                         let server_udp_socket_result = UdpSocket::bind("127.0.0.1:0");
                         
                         let server_udp_socket = match server_udp_socket_result {
                             Ok(socket) => socket,
                             Err(e) => {
-                                response = format!("ERROR: Failed to bind UDP socket: {}", e);
-                                return; // or handle error appropriately
+                                let error_msg = format!("ERROR: Внутренняя ошибка: {}\n", e);
+                                let _ = to_client_stream.write_all(error_msg.as_bytes());
+                                let _ = to_client_stream.flush();
+                                continue;
                             }
                         };
                         
                         let server_addr_port = match server_udp_socket.local_addr() {
                             Ok(addr) => addr,
                             Err(e) => {
-                                response = format!("ERROR: Failed to get local address: {}", e);
-                                return;
+                                let error_msg = format!("ERROR: Ошибка работы с сокетом: {}\n", e);
+                                let _ = to_client_stream.write_all(error_msg.as_bytes());
+                                let _ = to_client_stream.flush();
+                                continue;
                             }
                         };
                         
-                        response = format!("Начало стриминга: {} → {}\n>", server_addr_port, stream_command_ok.client_addr_port); 
-                        println!("Начало стриминга: {} → {}", server_addr_port, stream_command_ok.client_addr_port);
+                        // response = format!("Начало стриминга: {} → {}\n", server_addr_port, stream_command_ok.client_addr_port); 
+                        // println!("Начало стриминга: {} → {}", server_addr_port, stream_command_ok.client_addr_port);
                         
-                        // 👇 Clone shared resources for the thread
                         // let client_addr_port = stream_command_ok.client_addr_port; // Clone the addr
                         // let tickers = stream_command_ok.tickers.clone(); // Clone tickers
                         
-                        /// Handle a STREAM command: spawn thread + start streaming
-                        // pub fn handle_stream_command(&self, cmd: StreamCommand) -> Result<(), String> {
-                        // 👇 Create UDP socket with OS-assigned port (0 = ephemeral port)
-                        
-                        // // TODO: обработка ошибки
-                        // let server_udp_socket = UdpSocket::bind("127.0.0.1:0");
-                        //     // .map_err(|e| format!("Failed to bind UDP socket: {}", e))?;
-                            
-                        // // TODO: обработка ошибки
-                        // let server_addr_port = server_udp_socket.unwrap().local_addr();
-                        //     // .map_err(|e| format!("Failed to get local address: {}", e))?;
-                            
+                        // Проверка уже начала стриминга на этот адрес:порт делаю при регстрации
+
+                        // if quotes_generator.is_streaming_already_started(&stream_command_ok.client_addr_port) {
+                        //         let error_msg = format!("ERROR: Стриминг уже начался указанный адрес:порт: {}\n", stream_command_ok.client_addr_port);
+                        //         let _ = to_client_stream.write_all(error_msg.as_bytes());
+                        //         let _ = to_client_stream.flush();
+                        //         continue;
+                        // }
+
                         println!("Начало стриминга: {} → {}", server_addr_port, stream_command_ok.client_addr_port);
-                            
-                        // 👇 Clone shared resources for the thread
+
                         let quotes_generator_clone = quotes_generator.clone();
                         // let tickers = cmd.tickers.clone();
                         // let target_addr = cmd.target_addr;
 
-
-                        // Регистрация клиента и 
+                        // Регистрация клиента
                         let read_from_gen_channel = match quotes_generator_clone.register_udp_streaming(
                                                                     stream_command_ok.client_addr_port, stream_command_ok.tickers) {
                             Ok(receiver) => receiver,
                             Err(e) => {
-                                response = format!("ERROR: Внутренняя ошибка для регистрации подисок на тикеры : {}", e);
-                                break; // Use break instead of return
+                                let error_msg = format!("ERROR: Ошибка для регистрации подписки на тикеры: {}\n", e);
+                                let _ = to_client_stream.write_all(error_msg.as_bytes());
+                                let _ = to_client_stream.flush();
+                                continue;
                             }
                         };
+
+                        let success_msg = format!("Начало стриминга: {}\n", stream_command_ok.client_addr_port);
+                        let _ = to_client_stream.write_all(success_msg.as_bytes());
+                        let _ = to_client_stream.flush();
 
                         // Поток UDP-стриминга под нового клиента 
                         thread::spawn(move || {
@@ -197,7 +202,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                                     Ok(read_quote) => {
                                         let data = read_quote.to_string() + "\n";
                                         if let Err(e) = server_udp_socket.send_to(data.as_bytes(), stream_command_ok.client_addr_port) {
-                                            eprintln!("❌ Ошибка отправки {}: {}", stream_command_ok.client_addr_port, e);
+                                            eprintln!("Ошибка отправки {}: {}", stream_command_ok.client_addr_port, e);
                                             break;
                                         }
                                         println!("📤 Отправлено: {} → {}", read_quote.ticker, stream_command_ok.client_addr_port);
@@ -210,10 +215,8 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                                 }
                             
                                 // Пусть пока читают сразу по несколько тиков
-                                thread::sleep(Duration::from_secs(5));
+                                thread::sleep(Duration::from_millis(500));
                             }
-
-
 
                             // Предыдущая реализация напрямую через generator с локами
                             // loop {
@@ -235,14 +238,12 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                             // }
                         });
                     },
-                    Err(e) => {
-                        response = e;
+                    Err(parse_error) => {
+                        let error_msg = format!("ERROR: {}\n", parse_error);
+                        let _ = to_client_stream.write_all(error_msg.as_bytes());
+                        let _ = to_client_stream.flush();
                     }
                 }
-                
-                // Отправляем ответ и снова показываем промпт
-                let _ = to_client_stream.write_all(response.as_bytes());
-                let _ = to_client_stream.flush();
             }
             Err(_) => {
                 // ошибка чтения — закрываем
@@ -266,16 +267,17 @@ impl StreamCommand {
 
         // Проверяю тут жёстко на конкретную команду (можно отдельно, если буду добавлять команды)
         if parts.len() != 3 || parts[0].to_uppercase() != "STREAM" {
-            return Err("ERROR: Неверный формат команды: STREAM udp://host:port TICKER1,TICKER2\n>".into());
+            // ERROR подставляем верхнеуровнево. (!) И newline там же
+            return Err("Неверный формат команды: STREAM udp://host:port TICKER1,TICKER2".into());
         }
         
         // Отрезаем префикс
         let addr_str_no_prefix = parts[1].strip_prefix("udp://")
-            .ok_or("ERROR: Принимаем только UDP: в адресе нет префикса udp://\n>")?;
+            .ok_or("Принимаем только UDP: в адресе нет префикса udp://")?;
 
         // Парсим адрес с портом через parse<SocketAddr>
         let target_addr = addr_str_no_prefix.parse::<SocketAddr>()
-            .map_err(|e| format!("Адрес не распарсился {}: {}\n>", addr_str_no_prefix, e))?;
+            .map_err(|e| format!("Адрес не распарсился {}: {}", addr_str_no_prefix, e))?;
         
         // Разделяем компании, засовываем в вектор (совсем путые тикеры тоже убираем)
         let tickers: Vec<String> = parts[2].split(',')
@@ -284,7 +286,7 @@ impl StreamCommand {
             .collect();
         
         if tickers.is_empty() {
-            return Err("ERROR: Не указано ни одной компании\n>".into());
+            return Err("Не указано ни одной компании".into());
         }
         
         Ok(Self{client_addr_port: target_addr, tickers})
