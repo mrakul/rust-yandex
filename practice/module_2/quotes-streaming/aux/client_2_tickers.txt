@@ -1,0 +1,3 @@
+GOOGL
+AMZN
+NVDA

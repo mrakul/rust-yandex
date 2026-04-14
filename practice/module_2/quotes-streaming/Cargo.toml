@@ -12,11 +12,11 @@ crossbeam-channel = "0.5.15"
  name = "server"    
  path = "src/bin/server.rs"     
 
-# [[bin]]    
-# name = "client"    
-# path = "src/bin/client.rs"
+[[bin]]    
+name = "client"    
+path = "src/bin/client.rs"
 
 # Для тестирования с помощью CLI
 [[bin]]    
-name = "client"    
+name = "client_cli"    
 path = "src/bin/client_cli.rs"

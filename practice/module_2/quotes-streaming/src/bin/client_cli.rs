@@ -1,16 +1,24 @@
-// Простой клиент, без наворотов :)
+// Для проверки через CLI, отдельный поток UDP от сервера пока можно проверять через nc, отдельно посылая команды:
+// Клиент: 
+//      nc 127.0.0.1 11000
+//      STREAM udp://127.0.0.1:9100 UNH,CRM
+//      STREAM udp://127.0.0.1:9200 AAPL,CRM,TEST
+// В другом процессе:
+//      nc -u -l 9100
+
+// Здесь без пинга, всё в основном потоке
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
+use quotes_streaming::SERVER_ADDR;
 
 fn main() -> io::Result<()> {
     // Подключаемся и клонируем stream для reader'а
-    let to_server_stream = TcpStream::connect("127.0.0.1:11000")?;
+    let to_server_stream = TcpStream::connect(SERVER_ADDR)?;
     let mut to_client_stream = BufReader::new(to_server_stream.try_clone()?);
 
     // Читаем приветствие
     let mut buffer = [0; 1024];
-    // Читаем доступные данные один раз
     let read_count = to_client_stream.read(&mut buffer)?;
     let starting_string = String::from_utf8_lossy(&buffer[..read_count]);
     print!("{}", starting_string);
@@ -31,27 +39,6 @@ fn main() -> io::Result<()> {
         // }
 
         let trimmed_input = input_line.trim();
-        // if trimmed_input.is_empty() {
-        //     continue;
-        // }
-
-        // // EXIT — выходим из клиента
-        // if trimmed.eq_ignore_ascii_case("EXIT") {
-        //     println!("Bye!");
-        //     return ConnectionResult::Exit;
-        // }
-
-        // // PING — измеряем задержку
-        // if trimmed.eq_ignore_ascii_case("PING") {
-        //     match send_ping(&stream, &mut reader) {
-        //         Ok(latency) => println!("PONG (latency: {}ms)", latency),
-        //         Err(e) => {
-        //             println!("ERROR: server unreachable ({})", e);
-        //             return ConnectionResult::Lost;
-        //         }
-        //     }
-        //     continue;
-        // }
 
         // любые другие команды
         match send_command(&to_server_stream, &mut to_client_stream, trimmed_input) {
