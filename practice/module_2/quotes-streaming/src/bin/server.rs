@@ -195,21 +195,19 @@ pub fn server_process_request(mut stream: TcpStream, quotes_generator: Arc<Quote
                         let stop_streaming_flag = Arc::new(AtomicBool::new(false));
                         // let last_ping = Arc::new(AtomicU64::new(now_milliseconds()));
 
-                        // Поток-получатель PING'а
-                        // (не уверен, что это лучшая идея, но пока как есть.
-                        // Может, лучше в самом стриминг-потоке сделать, не понял, разрешает ли это задание)
-                        launch_udp_ping_receiver(ping_udp_socket, 
-                                                    last_ping, 
-                                                    Arc::clone(&stop_streaming_flag), 
-                                                    stream_command_ok.client_udp_addr);
-
-
+                        // Запускакем UDP-стриминговый поток для клиента
                         launch_udp_streamer(server_udp_socket, 
                                             server_udp_addr_port,
                                             quotes_generator.clone(), 
                                             read_from_gen_channel,
-                                            stop_streaming_flag, 
+                                            Arc::clone(&stop_streaming_flag), 
                                             stream_command_ok.client_udp_addr);
+
+                        // Поток-получатель PING'а
+                        launch_udp_ping_receiver(ping_udp_socket, 
+                                                    last_ping, 
+                                                    stop_streaming_flag, 
+                                                    stream_command_ok.client_udp_addr);
                     },
                     Err(parse_error) => {
                         log::error!("ERROR: {}\n", parse_error);
