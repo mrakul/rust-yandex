@@ -1,8 +1,9 @@
 // Запуск сервера - запускается на порту 11000:
 // cargo run --bin server
 
+use crossbeam_channel::Receiver;
 use quotes_streaming::{SERVER_ADDR, PING_TIMEOUT_MILLISECS};
-use quotes_streaming::quotes::{QuoteGenerator};
+use quotes_streaming::quotes::{QuoteGenerator, StockQuote};
 
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::{AtomicBool, AtomicU64};
@@ -15,6 +16,7 @@ use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::path::Path;
 use std::sync::atomic::Ordering;
+use std::thread::JoinHandle;
 
 fn main() -> std::io::Result<()> {
     /* 0. Инициализируем логгер */
@@ -41,8 +43,6 @@ fn main() -> std::io::Result<()> {
 
             std::thread::sleep(Duration::from_secs(2));
         }
-
-        // Ok(())
     });
 
     /* 2. Слушаем и обрабатываем входящие соединения */
@@ -71,27 +71,29 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGenerator>) {
 
-    // let client_addr = match stream.peer_addr() {
-    //     Ok(addr) => addr,
-    //     Err(e) => {
-    //         eprintln!("Failed to get peer address: {}", e);
-    //         return;
-    //     }
-    // };
+pub fn server_process_request(mut stream: TcpStream, quotes_generator: Arc<QuoteGenerator>) {
+
+    let client_addr = match stream.peer_addr() {
+        Ok(addr) => addr,
+        Err(error) => {
+            send_msg_to_tcp_client(&mut stream, format!("Ошибка работы с сокетом {}\n", error));
+            log::error!("Ошибка работы с сокетом {}", error);
+            return;
+        }
+    };
     
-    // let server_addr = match stream.local_addr() {
-    //     Ok(addr) => addr,
-    //     Err(e) => {
-    //         eprintln!("Failed to get local address: {}", e);
-    //         return;
-    //     }
-    // };
+    let server_addr = match stream.local_addr() {
+        Ok(addr) => addr,
+        Err(error) => {
+            send_msg_to_tcp_client(&mut stream, format!("Ошибка работы с сокетом {}\n", error));
+            log::error!("Ошибка работы с сокетом {}", error);
+            return;
+        }
+    };
 
-    // TODO: обработать ошибки
-    let client_addr = stream.peer_addr().expect("Не удалось получить адрес клиента из сокета");
-    let server_addr = stream.local_addr().expect("Не удалось получить адрес сервера из сокета");
+    // let client_addr = stream.peer_addr().expect("Не удалось получить адрес клиента из сокета");
+    // let server_addr = stream.local_addr().expect("Не удалось получить адрес сервера из сокета");
 
     // Клонируем stream: один экземпляр для чтения (обёрнут в BufReader), другой — для записи (для двух буферов под капотом)
     let mut to_client_tcp_stream = stream.try_clone().expect("Ошибка клонирования стрима");
@@ -131,9 +133,8 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                 // Пустой ввод
                 let command_from_client = command_from_client.trim();
                 if command_from_client.is_empty() {
-                    let error_msg = "Вы ничего не ввели. Введите команду в формате: STREAM udp://host:port TICKER1,TICKER2\n".to_string();
-                    let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
-                    let _ = to_client_tcp_stream.flush();
+                    send_msg_to_tcp_client(&mut to_client_tcp_stream, 
+                                   "Вы ничего не ввели. Введите команду в формате: STREAM udp://host:port TICKER1,TICKER2\n".to_string());
                     continue;
                 }
 
@@ -147,9 +148,8 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                             Ok(socket) => socket,
                             Err(e) => {
                                 log::error!("ERROR: Ошибка создания UDP-сокета для клиента: {}", e);
-                                let error_msg = format!("ERROR: Ошибка создания UDP-сокета для клиента: {}\n", e);
-                                let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
-                                let _ = to_client_tcp_stream.flush();
+                                send_msg_to_tcp_client(&mut to_client_tcp_stream,
+                                                                format!("ERROR: Ошибка создания UDP-сокета для клиента: {}\n", e));
                                 continue;
                             }
                         };
@@ -159,195 +159,62 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                             Ok(addr) => addr,
                             Err(e) => {
                                 log::error!("ERROR: Ошибка работы с сокетом: {}", e);
-                                let error_msg = format!("ERROR: Ошибка работы с сокетом: {}\n", e);
-                                let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
-                                let _ = to_client_tcp_stream.flush();
+                                send_msg_to_tcp_client(&mut to_client_tcp_stream,
+                                                                format!("ERROR: Ошибка работы с сокетом: {}\n", e));
                                 continue;
                             }
                         };
                         
                         // Регистрация клиента
-                        let quotes_generator_clone = quotes_generator.clone();
-                        let read_from_gen_channel = match quotes_generator_clone.register_udp_streaming(
+                        // let quotes_generator_clone = quotes_generator.clone();
+                        let read_from_gen_channel = match quotes_generator.register_udp_streaming(
                                                                     stream_command_ok.client_udp_addr, stream_command_ok.tickers) 
                         {
                             Ok(receiver) => receiver,
                             Err(e) => {
                                 log::error!("ERROR: Ошибка регистрации подписки на тикеры: {}", e);
-                                let error_msg = format!("ERROR: Ошибка регистрации подписки на тикеры: {}\n", e);
-                                let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
-                                let _ = to_client_tcp_stream.flush();
+                                send_msg_to_tcp_client(&mut to_client_tcp_stream,
+                                                                format!("ERROR: Ошибка регистрации подписки на тикеры: {}\n", e));
                                 continue;
                             }
                         };
 
-                        let success_msg = format!("OK: Начало стриминга: {} → {}\n", server_udp_addr_port, stream_command_ok.client_udp_addr);
-                        let _ = to_client_tcp_stream.write_all(success_msg.as_bytes());
-                        let _ = to_client_tcp_stream.flush();
-
+                        send_msg_to_tcp_client(&mut to_client_tcp_stream,
+                                                        format!("OK: Начало стриминга: {} → {}\n", server_udp_addr_port, 
+                                                                                                            stream_command_ok.client_udp_addr));
                         log::info!("Начало стриминга: {} → {}", server_udp_addr_port, stream_command_ok.client_udp_addr);
 
                         /*** Создание потоков: UDP-стриминг и PING ***/
 
                         // Сокет для пинга на чтение. TODO: обработка unwrap(), всё понимаю
                         let ping_udp_socket = server_udp_socket.try_clone().unwrap();
+                        // Делится между потоками, делаем по паре (клон при передаче в функцию)
 
-                        // Делится между потоками, делаем по паре
-                        let last_ping = Arc::new(AtomicU64::new(now_milliseconds()));
-                        let last_ping_clone = Arc::clone(&last_ping);
-                        
-                        let stop_streaming = Arc::new(AtomicBool::new(false));
-                        let stop_streaming_for_ping = Arc::clone(&stop_streaming);
+                        // Пинг Arc'ованный не нужен в текущем подходе, используется только PING-приёмником с одной moved-версией при создании потока
+                        let last_ping = AtomicU64::new(now_milliseconds());
+                        let stop_streaming_flag = Arc::new(AtomicBool::new(false));
+                        // let last_ping = Arc::new(AtomicU64::new(now_milliseconds()));
 
                         // Поток-получатель PING'а
-                        // (не уверен, что это лучшая идея, но пока как есть. Может, лучше в самом стриминг-потоке сделать, не понял, разрешает ли это задание)
-                        thread::spawn(move || {
-                            // Аналогично клиенту, читающему UDP-датаграммы
-                            ping_udp_socket.set_read_timeout(Some(Duration::from_millis(100))).ok();
-                            let mut buffer = [0u8; 32];
+                        // (не уверен, что это лучшая идея, но пока как есть.
+                        // Может, лучше в самом стриминг-потоке сделать, не понял, разрешает ли это задание)
+                        launch_udp_ping_receiver(ping_udp_socket, 
+                                                    last_ping, 
+                                                    Arc::clone(&stop_streaming_flag), 
+                                                    stream_command_ok.client_udp_addr);
 
-                            loop {
-                                // Здесь и ниже использую Relaxed - не нужен строгий порядок memory_order
-                                if stop_streaming_for_ping.load(Ordering::Relaxed) == true { 
-                                    break; 
-                                }
 
-                                match ping_udp_socket.recv_from(&mut buffer) {
-                                    Ok((len, _)) => {
-                                        if let Ok(msg) = std::str::from_utf8(&buffer[..len]) {
-                                            if msg.trim() == "PING" {
-                                                last_ping_clone.store(now_milliseconds(), Ordering::Relaxed);
-                                            }
-                                        }
-                                    }
-                                    Err(e) if e.kind() == std::io::ErrorKind::TimedOut 
-                                                  || e.kind() == std::io::ErrorKind::WouldBlock => {}
-                                    Err(e) => log::error!("Ошибка получения пинга: {}", e),
-                                }
-
-                                
-                                // Сравниваем с атомарной (разница до нуля)
-                                let now = now_milliseconds();
-                                let last = last_ping_clone.load(Ordering::Relaxed);
-
-                                if now.saturating_sub(last) > PING_TIMEOUT_MILLISECS {
-                                    log::warn!("Таймаут для {}. Останавливаем стриминг", stream_command_ok.client_udp_addr);
-                                    // Бабахаем остановку в потоке стриминга
-                                    stop_streaming_for_ping.store(true, Ordering::Relaxed);
-                                    break;
-                                }
-                            }
-                            
-                            log::info!("Завершение PING-обработчика для {}", stream_command_ok.client_udp_addr);
-                        });
-
-                        // Поток-получатель PING'а, просто без закрытия стриминга (не уверен, что это лучшая идея, но пока как есть)
-                        // thread::spawn(move || {
-                        //     let mut buffer = [0u8; 32];
-                        //     loop {
-                        //         match ping_udp_socket.recv_from(&mut buffer) {
-                        //             Ok((bytes_read, client_addr)) => {
-                        //                 let msg = std::str::from_utf8(&buffer[..bytes_read]).unwrap_or("");
-                        //                 if msg.trim() == "PING" {
-                        //                     println!("🏓 PING получен от {}", client_addr);
-                        //                     // TODO: логика апдейта и завершения стриминга, если таймаут 
-                        //                 }
-                        //             }
-                        //             Err(e) => eprintln!("Ping receive error: {}", e),
-                        //         }
-                        //     }
-                        // });
-
-                        // Поток UDP-стриминга под нового клиента 
-                        thread::spawn(move || {
-                            // Читаем из каналов от генератора
-
-                            log::debug!("Создание потока стриминга для {}", stream_command_ok.client_udp_addr);
-
-                            loop {
-                                    // Проверка атомарной переменной
-                                    if stop_streaming.load(Ordering::Relaxed) == true {
-                                        // Снимаем регистрацию
-                                        quotes_generator_clone.deregister_udp_streaming(stream_command_ok.client_udp_addr);
-                                        
-                                        log::warn!("Получен сигнал остановки для {}", stream_command_ok.client_udp_addr);
-                                        break;
-                                    }
-
-                                    // Чтение с таймаутом, здесь можно через один вызов
-                                    match read_from_gen_channel.recv_timeout(Duration::from_millis(50)) {
-                                        Ok(read_quote) => {
-                                            let quote_as_string = format!("{}\n", read_quote.to_string());
-
-                                            if let Err(e) = server_udp_socket.send_to(quote_as_string.as_bytes(), 
-                                                                                             stream_command_ok.client_udp_addr) 
-                                            {
-                                                log::error!("Ошибка отправки {}: {}", stream_command_ok.client_udp_addr, e);
-                                                break;
-                                            }
-                                            // Отправилос
-                                            log::debug!("📤 Отправлено: {} [{}] → {}",server_udp_addr_port,
-                                                                                    read_quote.ticker, 
-                                                                                    stream_command_ok.client_udp_addr);
-                                        }
-                                        // Аналогично - обработка для неблокирующего вызова
-                                        Err(crossbeam_channel::RecvTimeoutError::Timeout) => {}
-                                        Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
-                                    }
-                                }
-
-                                log::info!("Завершение UDP-стримера для {}", stream_command_ok.client_udp_addr);
-                            
-
-                            // TEMP: Без обработки атомарного флага
-                            // loop {
-                            //     match read_from_gen_channel.recv() {
-                            //         Ok(read_quote) => {
-                            //             let data = read_quote.to_string() + "\n";
-                            //             if let Err(e) = server_udp_socket.send_to(data.as_bytes(), stream_command_ok.client_addr_port) {
-                            //                 eprintln!("Ошибка отправки {}: {}", stream_command_ok.client_addr_port, e);
-                            //                 break;
-                            //             }
-                            //             println!("📤 Отправлено: {} [{}] → {}",server_udp_addr_port,
-                            //                                                                    read_quote.ticker, 
-                            //                                                                    stream_command_ok.client_addr_port);
-                            //         }
-                            //         Err(_) => {
-                            //             // Ошибка чтения из канала
-                            //             println!("Ошибка чтения из канала {}", stream_command_ok.client_addr_port);
-                            //             continue;
-                            //         }
-                            //     }
-
-                            //     // Пусть пока читают сразу по несколько тиков
-                            //     thread::sleep(Duration::from_millis(500));
-                            // }
-                           
-                            // // TEMP: Предыдущая реализация напрямую через generator с локами
-                            // loop {
-                            //     for ticker in &stream_command_ok.tickers {
-                            //         // Генерируем нужную котировку
-                            //         if let Some(quote) = quotes_generator_clone.generate_quote(ticker) {
-                            //             let data = quote.to_string() + "\n";
-                            //             // Посылаем на адрес из команды
-                            //             if let Err(e) = server_udp_socket.send_to(data.as_bytes(), stream_command_ok.client_addr_port) {
-                            //                 eprintln!("Ошибка отправки {}: {}", stream_command_ok.client_addr_port, e);
-                            //                 // Ошибка при посылке
-                            //                 break;
-                            //             }
-                            //             println!("📤 Отправлено: {} → {}", quote.ticker, stream_command_ok.client_addr_port);
-                            //         }
-                            //     }
-
-                            //      thread::sleep(Duration::from_secs(10));
-                            // }
-                        });
+                        launch_udp_streamer(server_udp_socket, 
+                                            server_udp_addr_port,
+                                            quotes_generator.clone(), 
+                                            read_from_gen_channel,
+                                            stop_streaming_flag, 
+                                            stream_command_ok.client_udp_addr);
                     },
                     Err(parse_error) => {
                         log::error!("ERROR: {}\n", parse_error);
-                        let error_msg = format!("ERROR: {}\n", parse_error);
-                        let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
-                        let _ = to_client_tcp_stream.flush();
+                        send_msg_to_tcp_client(&mut to_client_tcp_stream,
+                                                        format!("ERROR: {}\n", parse_error));
                     }
                 }
             }
@@ -363,6 +230,12 @@ fn now_milliseconds() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
 }
 
+// Отправка клиенту сообщения по TCP
+fn send_msg_to_tcp_client(to_client_stream: &mut TcpStream, message: String) {
+    let _ = to_client_stream.write_all(message.as_bytes());
+    // TODO: можно обработать ошибку
+    let _ = to_client_stream.flush();
+}
 
 /*** Секция команды STREAM ***/
 
@@ -414,4 +287,168 @@ impl StreamCommand {
         
         Ok(Self{client_udp_addr, tickers})
     }
+}
+
+/*** Создание потоков ***/
+
+fn launch_udp_ping_receiver(from_client_udp_socket: UdpSocket,
+                            last_ping: AtomicU64,
+                            stop_streaming_flag: Arc::<AtomicBool>,
+                            to_client_udp_addr: SocketAddr) -> JoinHandle<()>
+{
+    let join_handle = thread::spawn(move || {
+        // Аналогично клиенту, читающему UDP-датаграммы
+        from_client_udp_socket.set_read_timeout(Some(Duration::from_millis(100))).ok();
+        let mut buffer = [0u8; 32];
+
+        loop {
+            // Здесь и ниже использую Relaxed - не нужен строгий порядок memory_order
+            if stop_streaming_flag.load(Ordering::Relaxed) == true { 
+                break; 
+            }
+
+            match from_client_udp_socket.recv_from(&mut buffer) {
+                Ok((len, _)) => {
+                    if let Ok(msg) = std::str::from_utf8(&buffer[..len]) {
+                        if msg.trim() == "PING" {
+                            last_ping.store(now_milliseconds(), Ordering::Relaxed);
+                        }
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::TimedOut 
+                                || e.kind() == std::io::ErrorKind::WouldBlock => {}
+                Err(e) => log::error!("Ошибка получения пинга: {}", e),
+            }
+
+            
+            // Сравниваем с атомарной (разница до нуля)
+            let now = now_milliseconds();
+            let last = last_ping.load(Ordering::Relaxed);
+
+            if now.saturating_sub(last) > PING_TIMEOUT_MILLISECS {
+                log::warn!("Таймаут для {}. Останавливаем стриминг", to_client_udp_addr);
+                // Бабахаем остановку в потоке стриминга
+                stop_streaming_flag.store(true, Ordering::Relaxed);
+                break;
+            }
+        }
+        
+        log::info!("Завершение PING-обработчика для {}", to_client_udp_addr);
+    });
+
+    join_handle
+}
+
+// TEMP:
+// Поток-получатель PING'а, просто без закрытия стриминга
+// thread::spawn(move || {
+//     let mut buffer = [0u8; 32];
+//     loop {
+//         match ping_udp_socket.recv_from(&mut buffer) {
+//             Ok((bytes_read, client_addr)) => {
+//                 let msg = std::str::from_utf8(&buffer[..bytes_read]).unwrap_or("");
+//                 if msg.trim() == "PING" {
+//                     println!("🏓 PING получен от {}", client_addr);
+//                     // TODO: логика апдейта и завершения стриминга, если таймаут 
+//                 }
+//             }
+//             Err(e) => eprintln!("Ping receive error: {}", e),
+//         }
+//     }
+// });
+
+
+// Поток UDP-стриминга под нового клиента 
+fn launch_udp_streamer(to_client_udp_socket: UdpSocket,
+                       server_udp_addr_port: SocketAddr,
+                       quotes_generator: Arc::<QuoteGenerator>,
+                       read_from_gen_channel: Receiver<StockQuote>,
+                       stop_streaming_flag: Arc::<AtomicBool>,
+                       to_client_udp_addr: SocketAddr) -> JoinHandle<()>
+{
+    let join_handle = thread::spawn(move || {
+        // Читаем из каналов от генератора
+
+        log::debug!("Создание потока стриминга для {}", to_client_udp_addr);
+
+        loop {
+                // Проверка атомарной переменной
+                if stop_streaming_flag.load(Ordering::Relaxed) == true {
+                    // Снимаем регистрацию
+                    quotes_generator.deregister_udp_streaming(to_client_udp_addr);
+                    
+                    log::warn!("Получен сигнал остановки для {}", to_client_udp_addr);
+                    break;
+                }
+
+                // Чтение с таймаутом, здесь можно через один вызов
+                match read_from_gen_channel.recv_timeout(Duration::from_millis(50)) {
+                    Ok(read_quote) => {
+                        let quote_as_string = format!("{}\n", read_quote.to_string());
+
+                        if let Err(e) = to_client_udp_socket.send_to(quote_as_string.as_bytes(), 
+                                                                  to_client_udp_addr) 
+                        {
+                            log::error!("Ошибка отправки {}: {}", to_client_udp_addr, e);
+                            break;
+                        }
+                        // Отправилос
+                        log::debug!("📤 Отправлено: {} [{}] → {}",server_udp_addr_port,
+                                                                  read_quote.ticker, 
+                                                                  to_client_udp_addr);
+                    }
+                    // Аналогично - обработка для неблокирующего вызова
+                    Err(crossbeam_channel::RecvTimeoutError::Timeout) => {}
+                    Err(crossbeam_channel::RecvTimeoutError::Disconnected) => break,
+                }
+            }
+
+            log::info!("Завершение UDP-стримера для {}", to_client_udp_addr);
+        
+
+        // TEMP: Без обработки атомарного флага
+        // loop {
+        //     match read_from_gen_channel.recv() {
+        //         Ok(read_quote) => {
+        //             let data = read_quote.to_string() + "\n";
+        //             if let Err(e) = server_udp_socket.send_to(data.as_bytes(), stream_command_ok.client_addr_port) {
+        //                 eprintln!("Ошибка отправки {}: {}", stream_command_ok.client_addr_port, e);
+        //                 break;
+        //             }
+        //             println!("📤 Отправлено: {} [{}] → {}",server_udp_addr_port,
+        //                                                                    read_quote.ticker, 
+        //                                                                    stream_command_ok.client_addr_port);
+        //         }
+        //         Err(_) => {
+        //             // Ошибка чтения из канала
+        //             println!("Ошибка чтения из канала {}", stream_command_ok.client_addr_port);
+        //             continue;
+        //         }
+        //     }
+
+        //     // Пусть пока читают сразу по несколько тиков
+        //     thread::sleep(Duration::from_millis(500));
+        // }
+        
+        // // TEMP: Предыдущая реализация напрямую через generator с локами
+        // loop {
+        //     for ticker in &stream_command_ok.tickers {
+        //         // Генерируем нужную котировку
+        //         if let Some(quote) = quotes_generator_clone.generate_quote(ticker) {
+        //             let data = quote.to_string() + "\n";
+        //             // Посылаем на адрес из команды
+        //             if let Err(e) = server_udp_socket.send_to(data.as_bytes(), stream_command_ok.client_addr_port) {
+        //                 eprintln!("Ошибка отправки {}: {}", stream_command_ok.client_addr_port, e);
+        //                 // Ошибка при посылке
+        //                 break;
+        //             }
+        //             println!("📤 Отправлено: {} → {}", quote.ticker, stream_command_ok.client_addr_port);
+        //         }
+        //     }
+
+        //      thread::sleep(Duration::from_secs(10));
+        // }
+    });
+
+    join_handle
 }

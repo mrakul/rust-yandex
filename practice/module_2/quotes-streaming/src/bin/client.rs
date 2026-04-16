@@ -145,12 +145,12 @@ fn main() -> io::Result<()> {
     // Ждём завершение, если был запущен
     if let Some(udp_receiver_join_handle) = udp_receiver_join_handle_opt  {
         // TODO: да, обработка ошибок
-        udp_receiver_join_handle.join();
+        udp_receiver_join_handle.join().unwrap()
     }
 
     if let Some(udp_ping_join_handle) = udp_ping_join_handle_opt  {
         // TODO: да, обработка ошибок
-        udp_ping_join_handle.join();
+        udp_ping_join_handle.join().unwrap();
     }
 
     Ok(())
