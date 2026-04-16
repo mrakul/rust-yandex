@@ -8,6 +8,8 @@ rand = "0.9"
 clap = { version = "4.0", features = ["derive"] }
 crossbeam-channel = "0.5.15"
 ctrlc = "3.5.2"
+log = "0.4.29"
+env_logger = "0.11.10"
 
 [[bin]]
  name = "server"    
@@ -17,7 +19,7 @@ ctrlc = "3.5.2"
 name = "client"    
 path = "src/bin/client.rs"
 
-# Для тестирования с помощью CLI
+# Для тестирования покомандно с помощью CLI
 [[bin]]    
 name = "client_cli"    
 path = "src/bin/client_cli.rs"

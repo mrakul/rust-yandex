@@ -167,7 +167,7 @@ impl QuoteGenerator {
             tickers: tickers_subscribe.clone(),
         });
         
-        println!("👤 UDP-стрим-поток для {} зарегистрировался с тикерами {:?}", client_addr, tickers_subscribe);
+        log::info!("👤 UDP-стрим-поток для {} зарегистрировался с тикерами {:?}", client_addr, tickers_subscribe);
         
         Ok(receive_from_gen_channel)
     }
@@ -179,11 +179,11 @@ impl QuoteGenerator {
  
         // Проверяем, что не было ничего 
         if let Some(_) = streamers.remove(&client_addr) {
-            println!("🗙 UDP-стрим снят с подписок: {} ", client_addr);
+            log::info!("🗙 UDP-стрим снят с подписок: {} ", client_addr);
             return Some(client_addr);
         }
         
-        println!("Попытка разрегистрации незарегистрированного UDP-стрима: {}", client_addr);
+        log::warn!("Попытка разрегистрации незарегистрированного UDP-стрима: {}", client_addr);
         
         None
     }
@@ -196,7 +196,7 @@ impl QuoteGenerator {
             // Проверка, подписан ли на текущий тикер
             if client_channel.tickers.contains(&quote.ticker) {
                 client_channel.to_streaming_thread_channel.send(quote)
-                    .map_err(|e| format!("Failed to send quote: {}", e))?;
+                    .map_err(|e| format!("Ошибка отправки котировки: {}", e))?;
                 Ok(())
             } else {
                 Err("UDP-стример не подписан на текущий тикер".to_string())
@@ -222,22 +222,23 @@ impl QuoteGenerator {
         let stock_prices = self.stock_prices_rw.read().unwrap();
 
         for (ticker, _) in stock_prices.iter() {
-
-            // TODO: обработать ошибку
-            let quote = Self::generate_quote(&self, ticker).unwrap();
-            self.broadcast_quote(&quote);
+            if let Some(quote) = Self::generate_quote(&self, ticker) {
+                self.broadcast_quote(&quote);
+            }
+            else {
+                log::error!("Не удалось сгенерировать котировку для тикера [{}]", ticker);
+            }
         }
 
         std::thread::sleep(Duration::from_millis(100));
     }
 
     // Проверка, начался ли уже стриминг на указанный адрес:порт
-    // TODO: надо делать атомарно с локом, пока чуть костыльно сделал
     fn is_streaming_already_started(&self, client_addr: &SocketAddr, 
                                     streamers: &std::sync::RwLockWriteGuard<'_, HashMap<SocketAddr, UdpStreamSubscriber>>)
                                      -> Result<(), String> 
     {
-        // Лок на чтение
+        // Лок делаю на запись при попытке регистрации
         // let streamers = self.udp_streamer_channels_rw.read().unwrap();
         
         if streamers.contains_key(client_addr) {

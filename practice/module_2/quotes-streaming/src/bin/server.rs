@@ -17,7 +17,13 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 
 fn main() -> std::io::Result<()> {
+    /* 0. Инициализируем логгер */
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("debug")
+    ).init();
     
+    log::info!("🚀 Старт сервера ...");
+
     /* 1. Запускаем и инициализируем генератор котировок в отдельном потоке */
     
     // Новый генератор через Arc для передачи в потоки
@@ -27,7 +33,7 @@ fn main() -> std::io::Result<()> {
     // Запускаем поток генератора цен до парсинга команд
     std::thread::spawn(move || -> std::io::Result<()> {
         let loaded_count = quotes_generator_clone.load_tickers_from_file(Path::new("aux/tickers.txt"))?;
-        println!("Загружено {} компаний для стриминга ...", loaded_count);
+        log::info!("Загружено {} компаний для стриминга ...", loaded_count);
 
         loop {
             quotes_generator_clone.update_prices();
@@ -41,7 +47,7 @@ fn main() -> std::io::Result<()> {
 
     /* 2. Слушаем и обрабатываем входящие соединения */
     let listener = TcpListener::bind(SERVER_ADDR)?;
-    println!("Сервер слушает на порту 11000");
+    log::info!("Сервер слушает на порту 11000");
 
     // Фактически бесконечный цикл, при возникновении соединения создаёт новый сервер
     // (блокирующий вызов .incoming(), аналог accept() в цикле)
@@ -51,14 +57,11 @@ fn main() -> std::io::Result<()> {
                 // Клонируем на каждой итерации
                 let quotes_generator_clone = quotes_generator_arc.clone();
 
-                // Здесь: main создаёт соединения с обработкой клиента, то есть каждый клиент обрабатывается
-                // в своём потоке, фактически каждое соединение
-                // Но при этом vault - разделяемое между потоками через Arc::clone(&vault)
                 thread::spawn(move || {
                     server_process_request(to_client_stream, quotes_generator_clone);
                 });
             }
-            Err(e) => eprintln!("Connection failed: {}", e),
+            Err(e) => log::error!("Connection failed: {}", e),
         }
     }
 
@@ -95,7 +98,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
     let mut to_server_tcp_stream = BufReader::new(stream);
 
     // Выводим серверу и отправляем клиенту
-    println!("Подключение к серверу: {} => {}", client_addr, server_addr);
+    log::info!("Подключение к серверу: {} => {}", client_addr, server_addr);
 
     let welcome_string = format!("Вы подключились к серверу: {} => {} \nДля начала стриминга введите команду: STREAM udp://host:port TICKER1,TICKER2\n",
                                                                      client_addr, server_addr
@@ -103,13 +106,13 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
     
     // Отправляем Welcome клиенту
     if let Err(e) = to_client_tcp_stream.write_all(welcome_string.as_bytes()) {
-        eprintln!("Не удалось отправить Welcome-сообщение: {}", e);
+        log::error!("Не удалось отправить Welcome-сообщение: {}", e);
         return;
     }
     let _ = to_client_tcp_stream.flush();
 
+    // Читаем команду в String
     let mut command_from_client = String::new();
-    // let mut response = String::new();
 
     loop {
         // Очищаем входную строку и главное - response        
@@ -143,6 +146,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                         let server_udp_socket = match server_udp_socket_result {
                             Ok(socket) => socket,
                             Err(e) => {
+                                log::error!("ERROR: Ошибка создания UDP-сокета для клиента: {}", e);
                                 let error_msg = format!("ERROR: Ошибка создания UDP-сокета для клиента: {}\n", e);
                                 let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
                                 let _ = to_client_tcp_stream.flush();
@@ -154,6 +158,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                         let server_udp_addr_port = match server_udp_socket.local_addr() {
                             Ok(addr) => addr,
                             Err(e) => {
+                                log::error!("ERROR: Ошибка работы с сокетом: {}", e);
                                 let error_msg = format!("ERROR: Ошибка работы с сокетом: {}\n", e);
                                 let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
                                 let _ = to_client_tcp_stream.flush();
@@ -168,6 +173,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                         {
                             Ok(receiver) => receiver,
                             Err(e) => {
+                                log::error!("ERROR: Ошибка регистрации подписки на тикеры: {}", e);
                                 let error_msg = format!("ERROR: Ошибка регистрации подписки на тикеры: {}\n", e);
                                 let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
                                 let _ = to_client_tcp_stream.flush();
@@ -179,7 +185,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                         let _ = to_client_tcp_stream.write_all(success_msg.as_bytes());
                         let _ = to_client_tcp_stream.flush();
 
-                        println!("Начало стриминга: {} → {}", server_udp_addr_port, stream_command_ok.client_udp_addr);
+                        log::info!("Начало стриминга: {} → {}", server_udp_addr_port, stream_command_ok.client_udp_addr);
 
                         /*** Создание потоков: UDP-стриминг и PING ***/
 
@@ -216,7 +222,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                                     }
                                     Err(e) if e.kind() == std::io::ErrorKind::TimedOut 
                                                   || e.kind() == std::io::ErrorKind::WouldBlock => {}
-                                    Err(e) => eprintln!("Ping recv error: {}", e),
+                                    Err(e) => log::error!("Ошибка получения пинга: {}", e),
                                 }
 
                                 
@@ -225,14 +231,14 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                                 let last = last_ping_clone.load(Ordering::Relaxed);
 
                                 if now.saturating_sub(last) > PING_TIMEOUT_MILLISECS {
-                                    println!("Таймаут для {}. Останавливаем стриминг", stream_command_ok.client_udp_addr);
+                                    log::warn!("Таймаут для {}. Останавливаем стриминг", stream_command_ok.client_udp_addr);
                                     // Бабахаем остановку в потоке стриминга
                                     stop_streaming_for_ping.store(true, Ordering::Relaxed);
                                     break;
                                 }
                             }
                             
-                            println!("Завершение PING-обработчика для {}", stream_command_ok.client_udp_addr);
+                            log::info!("Завершение PING-обработчика для {}", stream_command_ok.client_udp_addr);
                         });
 
                         // Поток-получатель PING'а, просто без закрытия стриминга (не уверен, что это лучшая идея, но пока как есть)
@@ -256,13 +262,15 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                         thread::spawn(move || {
                             // Читаем из каналов от генератора
 
+                            log::debug!("Создание потока стриминга для {}", stream_command_ok.client_udp_addr);
+
                             loop {
-                                    // Check stop flag frequently
-                                    if stop_streaming.load(Ordering::Relaxed) {
+                                    // Проверка атомарной переменной
+                                    if stop_streaming.load(Ordering::Relaxed) == true {
                                         // Снимаем регистрацию
                                         quotes_generator_clone.deregister_udp_streaming(stream_command_ok.client_udp_addr);
                                         
-                                        println!("Получен сигнал остановки для {}", stream_command_ok.client_udp_addr);
+                                        log::warn!("Получен сигнал остановки для {}", stream_command_ok.client_udp_addr);
                                         break;
                                     }
 
@@ -272,12 +280,13 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                                             let quote_as_string = format!("{}\n", read_quote.to_string());
 
                                             if let Err(e) = server_udp_socket.send_to(quote_as_string.as_bytes(), 
-                                                                                             stream_command_ok.client_udp_addr) {
-                                                eprintln!("Ошибка отправки {}: {}", stream_command_ok.client_udp_addr, e);
+                                                                                             stream_command_ok.client_udp_addr) 
+                                            {
+                                                log::error!("Ошибка отправки {}: {}", stream_command_ok.client_udp_addr, e);
                                                 break;
                                             }
                                             // Отправилос
-                                            println!("📤 Отправлено: {} [{}] → {}",server_udp_addr_port,
+                                            log::debug!("📤 Отправлено: {} [{}] → {}",server_udp_addr_port,
                                                                                     read_quote.ticker, 
                                                                                     stream_command_ok.client_udp_addr);
                                         }
@@ -287,7 +296,8 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                                     }
                                 }
 
-                                println!("Завершение UDP-стримера для {}", stream_command_ok.client_udp_addr);
+                                log::info!("Завершение UDP-стримера для {}", stream_command_ok.client_udp_addr);
+                            
 
                             // TEMP: Без обработки атомарного флага
                             // loop {
@@ -334,6 +344,7 @@ pub fn server_process_request(stream: TcpStream, quotes_generator: Arc<QuoteGene
                         });
                     },
                     Err(parse_error) => {
+                        log::error!("ERROR: {}\n", parse_error);
                         let error_msg = format!("ERROR: {}\n", parse_error);
                         let _ = to_client_tcp_stream.write_all(error_msg.as_bytes());
                         let _ = to_client_tcp_stream.flush();
@@ -367,18 +378,31 @@ impl StreamCommand {
         // Проверяю тут жёстко на конкретную команду (можно отдельно, если буду добавлять команды)
         if parts.len() != 3 || parts[0].to_uppercase() != "STREAM" {
             // ERROR подставляем верхнеуровнево. (!) И newline там же
+            log::warn!("Неверный формат команды: STREAM udp://host:port TICKER1,TICKER2\n");
             return Err("Неверный формат команды: STREAM udp://host:port TICKER1,TICKER2".into());
         }
         
         // Отрезаем префикс
-        let addr_str_no_prefix = parts[1].strip_prefix("udp://")
-            .ok_or("Принимаем только UDP: в адресе нет префикса udp://")?;
+        let addr_str_no_prefix = match parts[1].strip_prefix("udp://") {
+            Some(addr_no_prefix) => addr_no_prefix,
+            None => {
+                log::warn!("Принимаем только UDP: в адресе нет префикса udp://");
+                return Err("Принимаем только UDP: в адресе нет префикса udp://".into());
+            }
+        };
+            
 
         // Парсим адрес с портом через parse<SocketAddr>
-        let client_udp_addr = addr_str_no_prefix.parse::<SocketAddr>()
-            .map_err(|e| format!("Адрес не распарсился {}: {}", addr_str_no_prefix, e))?;
+        let client_udp_addr = match addr_str_no_prefix.parse::<SocketAddr>() {
+            Ok(addr) => addr,
+            Err(e) => {
+                log::warn!("Адрес не распарсился {}: {}", addr_str_no_prefix, e);
+                return Err(format!("Адрес не распарсился {}: {}", addr_str_no_prefix, e));
+            }
+        };
+        // .map_err(|e| format!("Адрес не распарсился {}: {}", addr_str_no_prefix, e))?;
         
-        // Разделяем компании, засовываем в вектор (совсем путые тикеры тоже убираем)
+        // Разделяем компании, засовываем в вектор (совсем пуcтые тикеры тоже убираем)
         let tickers: Vec<String> = parts[2].split(',')
             .map(|t| t.to_uppercase())
             .filter(|t| !t.is_empty())

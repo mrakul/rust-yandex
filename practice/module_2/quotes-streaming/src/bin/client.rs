@@ -9,7 +9,7 @@
 // cargo run --bin client -- --server-addr-port 127.0.0.1:11000 --udp-client-port 30000 --subscriptions-file aux/client_1_tickers.txt
 // cargo run --bin client -- --server-addr-port 127.0.0.1:11000 --udp-client-port 30002 --subscriptions-file aux/client_2_tickers.txt
 
-use quotes_streaming::PING_INTERVAL;
+use quotes_streaming::PING_INTERVAL_SECS;
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpStream, UdpSocket, SocketAddr};
@@ -250,7 +250,7 @@ fn launch_udp_ping(udp_socket: UdpSocket, ping_to_addr: SocketAddr, shutdown_fla
             // Тут можно поставить цикл с проверкой флага типа 10 по 200мс, чтобы быстрее среагировать, пока не сделал 
         
             // Ждём 2 секунды перед следующим пингом (как в задании)
-            std::thread::sleep(Duration::from_secs(PING_INTERVAL));
+            std::thread::sleep(Duration::from_secs(PING_INTERVAL_SECS));
         }
     
         println!("Поток PING-sender завершился");
