@@ -1,13 +1,13 @@
 // Запуск клиента, пример:
-// > cargo run --bin client -- --server-addr-port 127.0.0.1:11000 --udp-client-port 30000 --subscriptions-file aux/client_1_tickers.txt
+// > cargo run --bin client -- --server-addr 127.0.0.1:11000 --udp-port 30000 --tickers-file aux/client_1_tickers.txt
 //
-//  --server-addr-port <SERVER_ADDR_PORT>
-//  --udp-client-port <UDP_CLIENT_PORT>
-//  --subscriptions-file <SUBSCRIPTIONS_FILE>
+//  --server-addr <SERVER_ADDR_PORT>
+//  --udp-port <UDP_CLIENT_PORT>
+//  --tickers-file <SUBSCRIPTIONS_FILE>
 
 // Пускануть два клиента со своими подписками:
-// cargo run --bin client -- --server-addr-port 127.0.0.1:11000 --udp-client-port 30000 --subscriptions-file aux/client_1_tickers.txt
-// cargo run --bin client -- --server-addr-port 127.0.0.1:11000 --udp-client-port 30002 --subscriptions-file aux/client_2_tickers.txt
+// cargo run --bin client -- --server-addr 127.0.0.1:11000 --udp-port 30000 --tickers-file aux/client_1_tickers.txt
+// cargo run --bin client -- --server-addr 127.0.0.1:11000 --udp-port 30002 --tickers-file aux/client_2_tickers.txt
 
 use quotes_streaming::PING_INTERVAL_SECS;
 
