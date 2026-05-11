@@ -1,0 +1,51 @@
+Тестирование HTTP-серверов с curl
+curl — удобный инструмент для ручных проверок. С его помощью вы вызываете GET, отправляете JSON на POST/PUT, проверяете заголовки и редиректы, загружаете файлы формами, задаёте тайм-ауты и следите за статус-кодами. Этого достаточно, чтобы воспроизвести типичные сценарии и быстро локализовать проблемы.
+
+# GET запрос
+curl http://localhost:8080/api/users
+
+# POST запрос с JSON
+curl -X POST http://localhost:8080/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice", "email": "alice@example.com"}'
+
+# PUT запрос (обновление)
+curl -X PUT http://localhost:8080/api/users/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Updated"}'
+
+# DELETE запрос
+curl -X DELETE http://localhost:8080/api/users/1 
+
+Работу с параметрами удобно проверять отдельно:
+
+# Path параметры
+curl http://localhost:8080/api/users/123
+
+# Query параметры
+curl "http://localhost:8080/api/users?page=1&limit=10&name=Alice"
+
+# Множественные query параметры
+curl "http://localhost:8080/api/search?q=rust&category=programming&sort=date" 
+
+Заголовки и аутентификация иллюстрируются так:
+
+# Кастомные заголовки
+curl -H "X-API-Key: your-secret-key" \
+     -H "X-Client-Version: 1.0" \
+     http://localhost:8080/api/protected
+
+# Bearer токен
+curl -H "Authorization: Bearer your-token-here" \
+     http://localhost:8080/api/protected
+
+# Basic аутентификация
+curl -u username:password http://localhost:8080/api/protected 
+
+Для диагностики полезны флаги:
+
+    -v (подробности),
+    -I (только заголовки),
+    -L (следовать редиректам),
+    --max-time (тайм-аут запроса),
+    -w (форматированный вывод с кодом и временем).
