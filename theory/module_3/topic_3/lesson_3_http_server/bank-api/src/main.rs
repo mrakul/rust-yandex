@@ -23,12 +23,14 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let cors = Cors::permissive();
         App::new()
-            .wrap(Logger::default())
+            // Middleware выполняются в обратном порядке при ответе!
+            .wrap(Logger::default())             // 1. Логирование (внешнее кольцо)
             .wrap(cors)
+            // .wrap(custom_middleware)          // 2. Кастомная логика
             // Передаём сервис с репозиторием
             .app_data(web::Data::new(service.clone()))
             // Конфигурируем фукнции с путями, указанными через макросы
-            .configure(handlers::configure)
+            .configure(handlers::configure)     // 3. Handlers
     })
     .bind(("127.0.0.1", 8080))?
     .run()
