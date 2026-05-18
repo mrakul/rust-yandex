@@ -16,3 +16,5 @@ uuid = { version = "1.23.1", features = ["v4"] }
 futures-util = "0.3.32"
 actix = "0.13.5"
 actix-web-actors = "4.3.1"
+actix-cors = "0.7.1"
+cors = "0.1.0"

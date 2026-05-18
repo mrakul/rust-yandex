@@ -1,4 +1,6 @@
 use actix_web::{web, App, HttpServer, HttpResponse, Result, FromRequest};
+use actix_cors::Cors;
+
 
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
@@ -61,6 +63,30 @@ async fn main() -> std::io::Result<()> {
     });
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("https://myapp.com")
+            .allowed_origin("https://www.myapp.com")
+            .allowed_origin("http://localhost:3000") 
+            // Для разработки, в некоторых ситуациях бывает и для прода (бэкенд проксирует запросы в кор)
+            .allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![
+                actix_web::http::header::CONTENT_TYPE,
+                actix_web::http::header::AUTHORIZATION,
+            ])
+            .expose_headers(vec!["X-Total-Count"]) // чтобы фронт видел заголовки ответа
+            .supports_credentials() // Для cookies
+            .max_age(3600);
+       
+// # Запрос с разрешённого origin (должен пройти)
+// curl -H "Origin: https://myapp.com" \
+//      -H "Access-Control-Request-Method: POST" \
+//      -H "Access-Control-Request-Headers: Content-Type" \
+//      -X OPTIONS http://localhost:8080/api/accounts
+
+// # Запрос с неразрешённого origin (должен быть заблокирован)
+// curl -H "Origin: https://evil.com" \
+//      -X POST http://localhost:8080/api/accounts 
+
         App::new()
             .app_data(app_state.clone())
             // Конфигурация
@@ -69,7 +95,10 @@ async fn main() -> std::io::Result<()> {
             // Добавляем тайминг и RequestId middleware
             .wrap(presentation::middleware::TimingMiddleware)      // измерение времени
             .wrap(presentation::middleware::RequestIdMiddleware)   // корреляционный ID
-
+            
+            // Cors для запрета 
+            .wrap(cors) 
+            
             .service(web::scope("/api")
                 .route("/", web::get().to(index))
                 .route("/health", web::get().to(health))
