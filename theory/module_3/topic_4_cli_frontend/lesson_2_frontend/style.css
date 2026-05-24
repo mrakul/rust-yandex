@@ -1,0 +1,39 @@
+body {
+    font-family: system-ui, sans-serif;
+    padding: 2rem;
+    background-color: #f9fafb;
+}
+
+h1 {
+    color: #2d3748;
+}
+
+button {
+    background: #3182ce;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-left: 8px;
+}
+
+table {
+    margin-top: 1rem;
+    border-collapse: collapse;
+}
+
+td,
+th {
+    padding: 4px 8px;
+}

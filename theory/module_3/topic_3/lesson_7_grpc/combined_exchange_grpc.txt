@@ -1,0 +1,677 @@
+=== ./Cargo.toml ===
+[package]
+name = "exchange-grpc"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "exchange_grpc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "exchange_server"
+path = "src/main.rs"
+
+[[example]]
+name = "client_example"
+path = "examples/client_example.rs"
+
+[dependencies]
+tonic = "0.11"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+thiserror = "1"
+rand = "0.8"
+tokio-stream = "0.1"
+prost = "0.12"
+prost-types = "0.12"
+
+[build-dependencies]
+tonic-build = "0.11"
+
+
+=== ./build.rs ===
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tonic_build::configure()
+        .build_server(true)
+        .build_client(true)
+        .compile(
+            &["proto/exchange.proto"],
+            &["proto"],
+        )?;
+    Ok(())
+}
+
+
+
+=== ./build_1.rs ===
+fn main() {
+    // Этот код выполняется перед сборкой
+
+    // Команды для Cargo:
+    //  cargo:rerun-if-changed=<file> — пересобрать проект, если файл изменился.
+    //  cargo:rerun-if-env-changed=<var> — пересборка при изменении env.
+    //  cargo:warning=<msg> — вывести предупреждение при сборке.
+    //  cargo:rustc-link-lib=<lib> — связать бинарь с системной библиотекой.
+    //  cargo:rustc-env=<k=v> — установить env-переменную для компиляции.
+    //  cargo:rustc-cfg=<flag> — включить условную компиляцию.
+
+    // Показать предупреждение
+    println!("cargo:warning=This is a build script warning");
+
+    // Пересобрать при изменении файла
+    println!("cargo:rerun-if-changed=src/config.toml");
+
+    // Пересобрать при изменении переменной окружения
+    println!("cargo:rerun-if-env-changed=DATABASE_URL");
+} 
+
+=== ./build_2.rs ===
+// 1. Генерация кода:
+
+use std::{env, fs};
+use std::path::Path;
+
+fn main() {
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let dest = Path::new(&out_dir).join("generated.rs");
+
+    let code = r#"
+        pub const VERSION: &str = "1.0.0";
+        pub fn get_config() -> &'static str { "production" }
+    "#;
+
+    fs::write(dest, code).unwrap();
+
+    println!("cargo:rerun-if-changed=build.rs");
+} 
+
+=== ./build_3.rs ===
+2. Проверка системных зависимостей:
+
+// build.rs
+fn main() {
+    if cfg!(target_os = "linux") {
+        // Линкуемся с системной либой
+        println!("cargo:rustc-link-lib=ssl");
+    }
+} 
+
+3. Условная компиляция:
+
+// build.rs
+fn main() {
+    if let Ok(ver) = std::env::var("RUSTC_VERSION") {
+        println!("cargo:rustc-env=RUSTC_VERSION={}", ver);
+    }
+
+    if std::env::var("ENABLE_FEATURE").is_ok() {
+        println!("cargo:rustc-cfg=feature=\"enabled\"");
+    }
+} 
+
+
+
+=== ./examples/client_example.rs ===
+use exchange_grpc::client::ExchangeClient;
+use exchange_grpc::exchange::OrderType;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt()
+        .with_env_filter("info")
+        .init();
+    
+    let mut client = ExchangeClient::connect("http://127.0.0.1:50051".to_string()).await?;
+    
+    let user_id = "user_123".to_string();
+    
+    // Создание ордера на покупку
+    println!("Creating buy order...");
+    let order = client
+        .create_order(
+            user_id.clone(),
+            "BTC".to_string(),
+            OrderType::Buy,
+            50000.0,
+            100,
+        )
+        .await?;
+    println!("Created order: id={}, symbol={}, type={:?}, price={}, qty={}", 
+        order.id, order.symbol, order.r#type, order.price, order.quantity);
+    
+    // Получение баланса
+    println!("\nGetting balance...");
+    let balance = client
+        .get_balance(user_id.clone(), "USD".to_string())
+        .await?;
+    println!("Balance: user={}, currency={}, balance={}", 
+        balance.user_id, balance.currency, balance.balance);
+    
+    // Получение активных ордеров
+    println!("\nGetting active orders...");
+    let orders = client
+        .get_active_orders(user_id.clone(), "".to_string())
+        .await?;
+    println!("Active orders: {}", orders.len());
+    for order in &orders {
+        println!("  - Order {}: {} {} @ {}", order.id, order.symbol, order.quantity, order.price);
+    }
+    
+    // Поток котировок
+    println!("\nStreaming quotes (5 messages)...");
+    let mut stream = client
+        .stream_quotes(vec!["BTC".to_string(), "ETH".to_string()])
+        .await?;
+    
+    for _ in 0..5 {
+        match stream.message().await? {
+            Some(quote) => {
+                println!(
+                    "Quote: {} | bid={:.2} ask={:.2} last={:.2} volume={}",
+                    quote.symbol, quote.bid, quote.ask, quote.last, quote.volume
+                );
+            }
+            None => break,
+        }
+    }
+    
+    // Отмена ордера
+    if !orders.is_empty() {
+        println!("\nCancelling order...");
+        let cancel_response = client
+            .cancel_order(user_id.clone(), orders[0].id)
+            .await?;
+        println!("Cancel response: success={}, message={}", 
+            cancel_response.success, cancel_response.message);
+    }
+    
+    Ok(())
+}
+
+
+
+=== ./proto/exchange.proto ===
+syntax = "proto3";
+
+package exchange;
+
+// Сервис биржи
+service ExchangeService {
+  // Создание ордера (unary)
+  rpc CreateOrder(CreateOrderRequest) returns (OrderResponse);
+  
+  // Получение баланса пользователя (unary)
+  rpc GetBalance(GetBalanceRequest) returns (BalanceResponse);
+  
+  // Получение списка активных ордеров (unary)
+  rpc GetActiveOrders(GetActiveOrdersRequest) returns (ActiveOrdersResponse);
+  
+  // Поток котировок в реальном времени (server streaming)
+  rpc StreamQuotes(StreamQuotesRequest) returns (stream Quote);
+  
+  // Отмена ордера (unary)
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+}
+
+// Тип ордера
+enum OrderType {
+  ORDER_TYPE_UNSPECIFIED = 0;
+  ORDER_TYPE_BUY = 1;
+  ORDER_TYPE_SELL = 2;
+}
+
+// Статус ордера
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_FILLED = 2;
+  ORDER_STATUS_CANCELLED = 3;
+}
+
+// Ордер
+message Order {
+  int64 id = 1;
+  string user_id = 2;
+  string symbol = 3;
+  OrderType type = 4;
+  double price = 5;
+  int64 quantity = 6;
+  int64 filled_quantity = 7;
+  OrderStatus status = 8;
+  int64 created_at = 9;
+}
+
+// Запрос на создание ордера
+message CreateOrderRequest {
+  string user_id = 1;
+  string symbol = 2;
+  OrderType type = 3;
+  double price = 4;
+  int64 quantity = 5;
+}
+
+// Ответ с ордером
+message OrderResponse {
+  Order order = 1;
+}
+
+// Запрос на получение баланса
+message GetBalanceRequest {
+  string user_id = 1;
+  string currency = 2; // "USD", "BTC", "ETH" и т.д.
+}
+
+// Ответ с балансом
+message BalanceResponse {
+  string user_id = 1;
+  string currency = 2;
+  double balance = 3;
+}
+
+// Запрос на получение активных ордеров
+message GetActiveOrdersRequest {
+  string user_id = 1;
+  string symbol = 2; // опционально, если пустое — все символы
+}
+
+// Ответ со списком активных ордеров
+message ActiveOrdersResponse {
+  repeated Order orders = 1;
+}
+
+// Запрос на поток котировок
+message StreamQuotesRequest {
+  repeated string symbols = 1; // список символов для отслеживания
+}
+
+// Котировка
+message Quote {
+  string symbol = 1;
+  double bid = 2; // цена покупки
+  double ask = 3; // цена продажи
+  double last = 4; // последняя цена сделки
+  int64 volume = 5;
+  int64 timestamp = 6;
+}
+
+// Запрос на отмену ордера
+message CancelOrderRequest {
+  string user_id = 1;
+  int64 order_id = 2;
+}
+
+// Ответ на отмену ордера
+message CancelOrderResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
+
+=== ./src/client.rs ===
+use crate::exchange::exchange_service_client::ExchangeServiceClient;
+use crate::exchange::*;
+use tonic::Request;
+
+pub struct ExchangeClient {
+    client: ExchangeServiceClient<tonic::transport::Channel>,
+}
+
+impl ExchangeClient {
+    pub async fn connect(addr: String) -> Result<Self, Box<dyn std::error::Error>> {
+        let client = ExchangeServiceClient::connect(addr).await?;
+        Ok(Self { client })
+    }
+    
+    pub async fn create_order(
+        &mut self,
+        user_id: String,
+        symbol: String,
+        order_type: OrderType,
+        price: f64,
+        quantity: i64,
+    ) -> Result<Order, Box<dyn std::error::Error>> {
+        let request = Request::new(CreateOrderRequest {
+            user_id,
+            symbol,
+            r#type: order_type as i32,
+            price,
+            quantity,
+        });
+        
+        let response = self.client.create_order(request).await?;
+        let order = response.into_inner().order.ok_or("Order not found in response")?;
+        Ok(order)
+    }
+    
+    pub async fn get_balance(
+        &mut self,
+        user_id: String,
+        currency: String,
+    ) -> Result<BalanceResponse, Box<dyn std::error::Error>> {
+        let request = Request::new(GetBalanceRequest { user_id, currency });
+        let response = self.client.get_balance(request).await?;
+        Ok(response.into_inner())
+    }
+    
+    pub async fn get_active_orders(
+        &mut self,
+        user_id: String,
+        symbol: String,
+    ) -> Result<Vec<Order>, Box<dyn std::error::Error>> {
+        let request = Request::new(GetActiveOrdersRequest { user_id, symbol });
+        let response = self.client.get_active_orders(request).await?;
+        Ok(response.into_inner().orders)
+    }
+    
+    pub async fn stream_quotes(
+        &mut self,
+        symbols: Vec<String>,
+    ) -> Result<tonic::Streaming<Quote>, Box<dyn std::error::Error>> {
+        let request = Request::new(StreamQuotesRequest { symbols });
+        let response = self.client.stream_quotes(request).await?;
+        Ok(response.into_inner())
+    }
+    
+    pub async fn cancel_order(
+        &mut self,
+        user_id: String,
+        order_id: i64,
+    ) -> Result<CancelOrderResponse, Box<dyn std::error::Error>> {
+        let request = Request::new(CancelOrderRequest { user_id, order_id });
+        let response = self.client.cancel_order(request).await?;
+        Ok(response.into_inner())
+    }
+}
+
+
+
+=== ./src/lib.rs ===
+pub mod client;
+pub mod exchange {
+    tonic::include_proto!("exchange");
+}
+
+
+
+=== ./src/main.rs ===
+mod server;
+
+// Сгенерированный код из proto
+pub mod exchange {
+    tonic::include_proto!("exchange");
+}
+
+use server::ExchangeServiceImpl;
+use exchange::exchange_service_server::ExchangeServiceServer;
+use tonic::transport::Server;
+use tracing::info;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .init();
+    
+    let addr = "127.0.0.1:50051".parse()?;
+    let service = ExchangeServiceImpl::new();
+    
+    info!("🚀 Exchange gRPC server starting on {}", addr);
+    
+    Server::builder()
+        .add_service(ExchangeServiceServer::new(service))
+        .serve(addr)
+        .await?;
+    
+    Ok(())
+}
+
+
+=== ./src/server.rs ===
+use tonic::{Request, Response, Status};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use chrono::Utc;
+use tokio_stream;
+use rand::{Rng, SeedableRng};
+
+use crate::exchange::exchange_service_server::ExchangeService;
+use crate::exchange::*;
+
+// In-memory хранилище для демонстрации
+#[derive(Clone)]
+pub struct ExchangeState {
+    orders: Arc<RwLock<HashMap<i64, Order>>>,
+    balances: Arc<RwLock<HashMap<String, HashMap<String, f64>>>>, // user_id -> currency -> balance
+    next_order_id: Arc<RwLock<i64>>,
+}
+
+impl ExchangeState {
+    pub fn new() -> Self {
+        Self {
+            orders: Arc::new(RwLock::new(HashMap::new())),
+            balances: Arc::new(RwLock::new(HashMap::new())),
+            next_order_id: Arc::new(RwLock::new(1)),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ExchangeServiceImpl {
+    state: ExchangeState,
+}
+
+impl ExchangeServiceImpl {
+    pub fn new() -> Self {
+        Self {
+            state: ExchangeState::new(),
+        }
+    }
+}
+
+#[tonic::async_trait]
+impl ExchangeService for ExchangeServiceImpl {
+    async fn create_order(
+        &self,
+        request: Request<CreateOrderRequest>,
+    ) -> Result<Response<OrderResponse>, Status> {
+        let req = request.into_inner();
+        
+        // Валидация
+        if req.price <= 0.0 {
+            return Err(Status::invalid_argument("Price must be positive"));
+        }
+        if req.quantity <= 0 {
+            return Err(Status::invalid_argument("Quantity must be positive"));
+        }
+        if req.symbol.is_empty() {
+            return Err(Status::invalid_argument("Symbol cannot be empty"));
+        }
+        
+        // Генерация ID ордера
+        let order_id = {
+            let mut id = self.state.next_order_id.write().await;
+            let current = *id;
+            *id += 1;
+            current
+        };
+        
+        // Создание ордера
+        let order = Order {
+            id: order_id,
+            user_id: req.user_id.clone(),
+            symbol: req.symbol.clone(),
+            r#type: req.r#type,
+            price: req.price,
+            quantity: req.quantity,
+            filled_quantity: 0,
+            status: OrderStatus::Pending as i32,
+            created_at: Utc::now().timestamp(),
+        };
+        
+        // Сохранение ордера
+        {
+            let mut orders = self.state.orders.write().await;
+            orders.insert(order_id, order.clone());
+        }
+        
+        tracing::info!(
+            "Created order: id={}, user={}, symbol={}, type={:?}, price={}, qty={}",
+            order_id,
+            req.user_id,
+            req.symbol,
+            req.r#type,
+            req.price,
+            req.quantity
+        );
+        
+        Ok(Response::new(OrderResponse { order: Some(order) }))
+    }
+    
+    async fn get_balance(
+        &self,
+        request: Request<GetBalanceRequest>,
+    ) -> Result<Response<BalanceResponse>, Status> {
+        let req = request.into_inner();
+        
+        let balances = self.state.balances.read().await;
+        let user_balances = balances.get(&req.user_id);
+        
+        let balance = user_balances
+            .and_then(|b| b.get(&req.currency))
+            .copied()
+            .unwrap_or(0.0);
+        
+        Ok(Response::new(BalanceResponse {
+            user_id: req.user_id,
+            currency: req.currency,
+            balance,
+        }))
+    }
+    
+    async fn get_active_orders(
+        &self,
+        request: Request<GetActiveOrdersRequest>,
+    ) -> Result<Response<ActiveOrdersResponse>, Status> {
+        let req = request.into_inner();
+        
+        let orders = self.state.orders.read().await;
+        let active_orders: Vec<Order> = orders
+            .values()
+            .filter(|o| {
+                o.user_id == req.user_id
+                    && o.status == OrderStatus::Pending as i32
+                    && (req.symbol.is_empty() || o.symbol == req.symbol)
+            })
+            .cloned()
+            .collect();
+        
+        Ok(Response::new(ActiveOrdersResponse {
+            orders: active_orders,
+        }))
+    }
+    
+    type StreamQuotesStream = tokio_stream::wrappers::ReceiverStream<Result<Quote, Status>>;
+    
+    async fn stream_quotes(
+        &self,
+        request: Request<StreamQuotesRequest>,
+    ) -> Result<Response<Self::StreamQuotesStream>, Status> {
+        let req = request.into_inner();
+        
+        if req.symbols.is_empty() {
+            return Err(Status::invalid_argument("At least one symbol required"));
+        }
+        
+        let (tx, rx) = tokio::sync::mpsc::channel(128);
+        
+        // Запускаем задачу для отправки котировок
+        let symbols = req.symbols.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1));
+            
+            loop {
+                interval.tick().await;
+                
+                for symbol in &symbols {
+                    // Генерируем случайные котировки для демонстрации
+                    let base_price = match symbol.as_str() {
+                        "BTC" => 50000.0,
+                        "ETH" => 3000.0,
+                        "USD" => 1.0,
+                        _ => 100.0,
+                    };
+                    
+                    // Используем простой генератор на основе времени для избежания проблем с Send
+                    let timestamp = Utc::now().timestamp();
+                    let seed = (timestamp as u64) ^ (symbol.len() as u64);
+                    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+                    let variation = (rng.gen::<f64>() - 0.5) * 0.02; // ±1%
+                    let bid = base_price * (1.0 + variation);
+                    let ask = bid * 1.001; // спред 0.1%
+                    let last = (bid + ask) / 2.0;
+                    
+                    let quote = Quote {
+                        symbol: symbol.clone(),
+                        bid,
+                        ask,
+                        last,
+                        volume: rng.gen_range(0..1000000),
+                        timestamp,
+                    };
+                    
+                    if tx.send(Ok(quote)).await.is_err() {
+                        // Клиент отключился
+                        return;
+                    }
+                }
+            }
+        });
+        
+        Ok(Response::new(tokio_stream::wrappers::ReceiverStream::new(rx)))
+    }
+    
+    async fn cancel_order(
+        &self,
+        request: Request<CancelOrderRequest>,
+    ) -> Result<Response<CancelOrderResponse>, Status> {
+        let req = request.into_inner();
+        
+        let mut orders = self.state.orders.write().await;
+        
+        match orders.get_mut(&req.order_id) {
+            Some(order) => {
+                if order.user_id != req.user_id {
+                    return Err(Status::permission_denied("Order belongs to another user"));
+                }
+                
+                if order.status != OrderStatus::Pending as i32 {
+                    return Err(Status::failed_precondition(
+                        "Only pending orders can be cancelled",
+                    ));
+                }
+                
+                order.status = OrderStatus::Cancelled as i32;
+                
+                tracing::info!("Cancelled order: id={}, user={}", req.order_id, req.user_id);
+                
+                Ok(Response::new(CancelOrderResponse {
+                    success: true,
+                    message: "Order cancelled successfully".to_string(),
+                }))
+            }
+            None => Err(Status::not_found("Order not found")),
+        }
+    }
+}
+
+
+
