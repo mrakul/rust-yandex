@@ -1,0 +1,39 @@
+#  Делаем через Workspace, 4 крата - зависимости на основе проектов теории
+[workspace]
+members = ["blog-server", "blog-client", "blog-cli", "blog-wasm"]
+resolver = "2"
+
+[workspace.dependencies]
+# HTTP и gRPC
+actix-web = "4"
+actix-cors = "0.7"
+tonic = "0.11"
+tonic-build = "0.11"
+prost = "0.12"
+
+# БД и сериализация
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "migrate"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# CLI и WASM
+clap = { version = "4", features = ["derive"] }
+yew = { version = "0.21", features = ["csr"] }
+reqwasm = "0.5"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+serde-wasm-bindgen = "0.6"
+web-sys = { version = "0.3", features = ["HtmlInputElement", "Event", "InputEvent", "console", "Window", "Storage"] }
+# gloo-net = "0.6"
+
+# Утилиты и безопасность
+thiserror = "1"
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+jsonwebtoken = "9"
+argon2 = "0.5"
+dotenvy = "0.15"

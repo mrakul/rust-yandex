@@ -1,0 +1,20 @@
+target/
+**/target/
+
+# .env, секреты и т.д.
+.env
+.blog_token
+# *.key
+# *.pem
+
+# В задании указано
+Cargo.lock
+
+# WASM-связанные
+dist/
+pkg/
+*.wasm
+*.js
+
+# DS_Store
+.DS_Store
