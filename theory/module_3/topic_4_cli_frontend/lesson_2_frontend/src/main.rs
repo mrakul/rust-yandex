@@ -1,113 +1,128 @@
-// Импортируем необходимые библиотеки
-use reqwasm::http::Request;
-use serde::Deserialize;
-use wasm_bindgen_futures::spawn_local;
-use yew::prelude::*;
+// src/main.rs
 
-// (!) Доустановил вот это для запуска:
-// > rustup target add wasm32-unknown-unknown
+// Импортируем необходимые модули из Yew и других крейтов
+use yew::prelude::*;           // Основные типы и макросы Yew
+use wasm_bindgen_futures::spawn_local;  // Для выполнения асинхронных задач в WASM
+use reqwasm::http::Request;    // HTTP-клиент для WebAssembly
+use serde::Deserialize;        // Для десериализации JSON из API
 
+// Структура для хранения данных о ценах с Binance API
+// #[derive] автоматически реализует трейты для структуры
 #[derive(Clone, PartialEq, Deserialize)]
 struct Price {
-    symbol: String, // Название торговой пары (например: "BTCUSDT", "ETHUSDT")
-    price: String,  // Текущая цена в виде строки (используем String для точности)
+    symbol: String,   // Название торговой пары (например: "BTCUSDT")
+    price: String,    // Текущая цена в виде строки (для точности)
 }
 
-// Создаём главный компонент приложения
-// #[function_component] - макрос, который превращает функцию в компонент Yew
+// Объявляем корневой компонент приложения
+// #[function_component] - макрос для создания функциональных компонентов
 #[function_component(App)]
 fn app() -> Html {
-    // Используем хуки состояния (аналогично useState в React)
-
-    // data - хранит список криптовалют и их цен
-    // use_state инициализирует состояние пустым вектором
+    // Хуки состояния - аналогично useState в React
+    
+    // data: хранит список цен, инициализируется пустым вектором
     let data = use_state(|| Vec::<Price>::new());
-
-    // loading - флаг, указывающий на выполнение HTTP-запроса
+    
+    // filter: хранит текст фильтра для поиска по символам
+    let filter = use_state(|| String::new());
+    
+    // loading: флаг загрузки данных
     let loading = use_state(|| false);
 
-    // Создаём callback-функцию для загрузки данных
-    // Используем блок для ограничения области видимости клонированных переменных
+    // Создаем callback для загрузки данных
     let fetch_data = {
         // Клонируем указатели на состояние для использования в замыкании
         let data = data.clone();
         let loading = loading.clone();
-
         // Callback::from преобразует замыкание в обработчик событий Yew
         Callback::from(move |_| {
-            // Дополнительно клонируем для асинхронной задачи
+            // Дополнительное клонирование для асинхронной задачи
             let data = data.clone();
             let loading = loading.clone();
-
-            // Устанавливаем флаг загрузки в true
+            
+            // Устанавливаем флаг загрузки
             loading.set(true);
-
-            // spawn_local запускает асинхронную задачу в контексте WebAssembly
+            
+            // Запускаем асинхронную задачу
             spawn_local(async move {
                 // Выполняем GET-запрос к Binance API
-                // .await - приостанавливает выполнение, запрос завершится
-                let resp = Request::get("https://api.binance.com/api/v3/ticker/price")
+                if let Ok(resp) = Request::get("https://api.binance.com/api/v3/ticker/price")
                     .send()
-                    .await
-                    .unwrap(); // В реальном приложении лучше обрабатывать ошибки
-
-                // Парсим JSON-ответ в вектор структур Price
-                let json: Vec<Price> = resp.json().await.unwrap();
-
-                // Обновляем состояние с полученными данными
-                data.set(json);
-
-                // Сбрасываем флаг загрузки
+                    .await 
+                {
+                    // Парсим JSON ответ в вектор структур Price
+                    if let Ok(json) = resp.json::<Vec<Price>>().await {
+                        // Обновляем состояние с новыми данными
+                        data.set(json);
+                    }
+                }
+                // Сбрасываем флаг загрузки независимо от результата
                 loading.set(false);
             });
         })
     };
 
-    // Макрос html! позволяет писать JSX-подобный код на Rust
+    // Обработчик ввода для поля фильтра
+    let oninput = {
+        let filter = filter.clone();
+        Callback::from(move |e: InputEvent| {
+            // Преобразуем event target в HTMLInputElement
+            let input: web_sys::HtmlInputElement = e.target_unchecked_into();
+            // Обновляем состояние фильтра
+            filter.set(input.value());
+        })
+    };
+
+    // Рендерим JSX-подобную разметку с помощью макроса html!
     html! {
         <div class="p-4 font-sans">
-            /* Заголовок приложения */
-            <h1 class="text-2xl mb-4">{"Binance Crypto Prices"}</h1>
+            <h1>{"Binance Crypto Prices"}</h1>
+            
+            <div>
+                {/* Кнопка для загрузки данных */}
+                <button onclick={fetch_data.clone()}>{"Обновить"}</button>
+                
+                {/* Поле ввода для фильтрации */}
+                <input
+                    type="text"
+                    placeholder="Фильтр по символу..."
+                    value={(*filter).clone()}  // Дереференсируем и клонируем значение
+                    {oninput}                  // Привязываем обработчик ввода
+                />
+            </div>
 
-            /* Кнопка для загрузки/обновления данных */
-            <button
-                onclick={fetch_data.clone()}
-                class="px-4 py-2 bg-blue-600 text-white rounded"
-            >
-                {"Обновить"}
-            </button>
-
-            /* Условный рендеринг: проверяем состояние загрузки */
+            {/* Условный рендеринг: показываем индикатор загрузки или таблицу */}
             if *loading {
-                // Показываем индикатор загрузки
                 <p>{"Загрузка..."}</p>
             } else {
-                // Рендерим таблицу с данными
-                <table class="mt-4 border-collapse">
-                    /* Заголовок таблицы */
-                    <tr><th>{"Пара"}</th><th>{"Цена"}</th></tr>
-
-                    /* Итерируемся по данным и создаём строки таблицы */
-                    {
-                        // data.iter() - создаёт итератор по данным
-                        // .take(10) - берёт только первые 10 элементов
-                        // .map() - преобразует каждый элемент в HTML
-                        for data.iter().take(10).map(|p| html! {
-                            <tr>
-                                /* Ячейка с названием торговой пары */
-                                <td class="border px-2">{ &p.symbol }</td>
-                                /* Ячейка с ценой */
-                                <td class="border px-2">{ &p.price }</td>
-                            </tr>
-                        })
-                    }
+                <table>
+                    <thead>
+                        <tr><th>{"Пара"}</th><th>{"Цена"}</th></tr>
+                    </thead>
+                    <tbody>
+                        {
+                            // Итерация по отфильтрованным данным
+                            for data.iter()
+                                // Фильтруем по символу (регистронезависимо)
+                                .filter(|p| p.symbol.to_lowercase().contains(&filter.to_lowercase()))
+                                // Берем только первые 15 элементов для производительности
+                                .take(15)
+                                // Преобразуем каждую структуру Price в HTML строку таблицы
+                                .map(|p| html! {
+                                    <tr>
+                                        <td>{ &p.symbol }</td>
+                                        <td>{ &p.price }</td>
+                                    </tr>
+                                })
+                        }
+                    </tbody>
                 </table>
             }
         </div>
     }
 }
 
-// Главная функция - точка входа приложения
+// Точка входа приложения
 fn main() {
     // Инициализируем систему логирования для отладки в браузере
     // Логи будут появляться в консоли разработчика
