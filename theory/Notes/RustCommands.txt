@@ -13,6 +13,9 @@ cargo new yandex_course --lib
 # Просто проверка кода
 cargo check 
 
+# Проверка всех member'ов workspace'а
+cargo check --workspace
+
 # Откомпилировать, собрать
 cargo build 
 

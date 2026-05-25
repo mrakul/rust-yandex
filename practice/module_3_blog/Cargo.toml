@@ -1,4 +1,5 @@
 #  Делаем через Workspace, 4 крата - зависимости на основе проектов теории
+#  cargo check --workspace - проверка
 [workspace]
 members = ["blog-server", "blog-client", "blog-cli", "blog-wasm"]
 resolver = "2"
