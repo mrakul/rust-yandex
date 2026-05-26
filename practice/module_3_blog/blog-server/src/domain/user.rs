@@ -13,18 +13,6 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct RegisterRequest {
-    pub username: String,
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct LoginRequest {
-    pub username: String,
-    pub password: String,
-}
 
 impl User {
     pub fn new(username: String, email: String, password_hash: String) -> Self {

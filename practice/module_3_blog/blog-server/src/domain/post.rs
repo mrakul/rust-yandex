@@ -11,18 +11,6 @@ pub struct Post {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CreatePostRequest {
-    pub title: String,
-    pub content: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdatePostRequest {
-    // Оба опциональны
-    pub title: Option<String>,
-    pub content: Option<String>,
-}
 
 impl Post {
     pub fn new(author_id: i64, title: String, content: String) -> Self {

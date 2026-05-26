@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 # Пока зависимости на основе теории
-
 [dependencies]
 # HTTP
 actix-web = { workspace = true }
 actix-cors = { workspace = true }
 # actix-web-httpauth = { workspace = true }
+async-trait = { workspace = true }
 
 # gRPC
 # tonic = { workspace = true }
@@ -35,6 +35,10 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 dotenvy = { workspace = true }
 tokio = { workspace = true }
+time = { workspace = true }
+# Его отдельно для Bearer'а 
+actix-web-httpauth = "0.8.2"
 
+# Эти зависимости только для build.rs
 [build-dependencies]
 tonic-build = { workspace = true }

@@ -29,7 +29,7 @@ where
             .find_by_id(id)
             .await
             .map_err(BankError::from)?
-            .ok_or_else(|| BankError::NotFound(format!("user {}", id)))
+              .ok_or_else(|| BankError::NotFound(format!("user {}", id)))
     }
 
     #[instrument(skip(self))]
@@ -46,7 +46,7 @@ where
             .find_by_email(&email.to_lowercase())
             .await
             .map_err(BankError::from)?
-            .ok_or_else(|| BankError::Unauthorized)?;
+              .ok_or_else(|| BankError::Unauthorized)?;
 
         let valid = verify_password(password, &user.password_hash)
             .map_err(|_| BankError::Unauthorized)?;

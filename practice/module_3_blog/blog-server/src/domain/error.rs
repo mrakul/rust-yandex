@@ -5,6 +5,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum DomainError {
+    // Здесь пока есть неиспользуемые
     #[error("validation failed: {0}")]
     Validation(String),
     #[error("user already exists: {0}")]
@@ -45,6 +46,7 @@ struct ErrorBody<'a> {
     details: Option<serde_json::Value>,
 }
 
+// Коды возвратов
 impl ResponseError for BlogError {
     fn status_code(&self) -> StatusCode {
         match self {
@@ -73,6 +75,7 @@ impl ResponseError for BlogError {
     }
 }
 
+// Соответствие доменных -> блогерских ошибок
 impl From<DomainError> for BlogError {
     fn from(err: DomainError) -> Self {
         match err {
