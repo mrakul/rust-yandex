@@ -29,6 +29,7 @@ where
     pub async fn register(&self, email: String, password: String) -> Result<User, BankError> {
         let hash = hash_password(&password).map_err(|err| BankError::Internal(err.to_string()))?;
         let user = User::new(email.to_lowercase(), hash);
+        // Бабахаем юзера
         self.repo.create(user).await.map_err(BankError::from)
     }
 
@@ -43,21 +44,19 @@ where
 
         let is_valid = verify_password(password, &user.password_hash)
             .map_err(|_| BankError::Unauthorized)?;
+
         if !is_valid {
             return Err(BankError::Unauthorized);
         }
 
-        self.keys
-            .generate_token(user.id)
+        self.keys.generate_token(user.id)
             .map_err(|err| BankError::Internal(err.to_string()))
     }
 
     pub async fn get_user(&self, user_id: Uuid) -> Result<User, BankError> {
-        self.repo
-            .find_by_id(user_id)
-            .await
+        self.repo.find_by_id(user_id).await
             .map_err(BankError::from)?
-            .ok_or_else(|| BankError::NotFound(format!("user {}", user_id)))
+            .ok_or_else(|| BankError::NotFound(format!("Пользователь {}", user_id)))
     }
 }
 

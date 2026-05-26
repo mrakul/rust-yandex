@@ -3,9 +3,6 @@ target/
 
 # .env, секреты и т.д.
 .env
-.blog_token
-# *.key
-# *.pem
 
 # В задании указано
 Cargo.lock

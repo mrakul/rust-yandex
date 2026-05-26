@@ -63,6 +63,7 @@ impl UserRepository for PostgresUserRepository {
             "#,
         )
         .bind(email)
+        // Может не быть
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| {
@@ -87,6 +88,7 @@ impl UserRepository for PostgresUserRepository {
             "#,
         )
         .bind(id)
+        // Может не быть
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| {
