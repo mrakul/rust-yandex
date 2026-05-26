@@ -30,11 +30,18 @@ web-sys = { version = "0.3", features = ["HtmlInputElement", "Event", "InputEven
 # gloo-net = "0.6"
 
 # Утилиты и безопасность
+argon2 = "0.5"
+jsonwebtoken = "9"
+rand_core = { version = "0.6", features = ["getrandom"] }
+
+# Ошибки
 thiserror = "1"
 anyhow = "1"
 tokio = { version = "1", features = ["full"] }
+
+# Tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-jsonwebtoken = "9"
-argon2 = "0.5"
+
+# Environment
 dotenvy = "0.15"
