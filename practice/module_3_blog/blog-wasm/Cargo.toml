@@ -4,6 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+wasm-bindgen.workspace = true
+yew.workspace = true
+serde = {workspace = true}
+reqwasm = {workspace = true}
+wasm-bindgen-futures.workspace = true
+web-sys.workspace = true
+wasm-logger = "0.2.0"
 
 [lib]
 crate-type = ["cdylib"]

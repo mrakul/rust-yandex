@@ -1,0 +1,26 @@
+<!--  demo.html --> 
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Rust + WebAssembly</title>
+</head>
+<body>
+  <h1>Rust WebAssembly Demo</h1>
+  <div id="output"></div>
+
+  <script type="module">
+    import init, { greet } from "./pkg/wasm_demo.js";
+
+    async function run() {
+      await init();
+      const message = greet("Мир");
+      document.getElementById("output").textContent = message;
+    }
+
+    run();
+  </script>
+</body>
+</html>
+  

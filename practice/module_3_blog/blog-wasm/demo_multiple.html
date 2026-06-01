@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Rust + WebAssembly - Многократное приветствие</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    #output {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+      white-space: pre-line;
+    }
+    .controls {
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 8px 12px;
+      margin: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background: #007acc;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005a9e;
+    }
+  </style>
+</head>
+<body>
+  <h1>Rust WebAssembly - Многократное приветствие</h1>
+  
+  <div class="controls">
+    <input type="text" id="nameInput" placeholder="Введите имя" value="Мир">
+    <input type="number" id="countInput" placeholder="Количество" value="3" min="1" max="10">
+    <button onclick="runGreet()">Поприветствовать</button>
+  </div>
+
+  <div id="output"></div>
+
+  <script type="module">
+    import init, { greet } from "./pkg/wasm_demo.js";
+
+    // Инициализация WASM-модуля
+    let wasmInitialized = false;
+
+    async function initializeWasm() {
+      if (!wasmInitialized) {
+        await init();
+        wasmInitialized = true;
+      }
+    }
+
+    // Основная функция для вызова приветствия
+    window.runGreet = async function() {
+      await initializeWasm();
+      
+      const name = document.getElementById('nameInput').value || 'Гость';
+      const count = parseInt(document.getElementById('countInput').value) || 1;
+      
+      // Ограничиваем максимальное количество для демонстрации
+      const safeCount = Math.min(Math.max(count, 1), 10);
+      
+      const message = greet(name, safeCount);
+      document.getElementById('output').textContent = message;
+    }
+
+    // Автоматический запуск при загрузке страницы
+    initializeWasm().then(() => {
+      document.getElementById('output').textContent = 'WASM-модуль загружен! Нажмите кнопку для приветствия.';
+    });
+  </script>
+</body>
+</html>
