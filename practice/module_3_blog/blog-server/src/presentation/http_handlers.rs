@@ -70,6 +70,7 @@ async fn list_posts(
     let offset = query.offset.unwrap_or(0);
 
     let (posts, total) = blog.list_posts(limit, offset).await?;
+
     let response = ListPostsResponse {
         posts: posts.into_iter().map(PostPublic::from).collect(),
         total,
@@ -86,6 +87,7 @@ async fn get_post(
     path: web::Path<i64>,
 ) -> Result<HttpResponse, BlogError> {
     let post = blog.get_post(path.into_inner()).await?;
+    
     Ok(HttpResponse::Ok().json(PostPublic::from(post)))
 }
 
