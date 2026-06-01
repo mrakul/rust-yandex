@@ -4,6 +4,22 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# Для HTTP-клиента
+reqwest = {version = "0.13.4", features = ["json"] }
+
+# Для gRPC, TODO: сначала сделаю HTTP часть
+# tonic = { workspace = true }
+# prost = { workspace = true }
+# prost-types = { workspace = true }
+
+# Остальное
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
 
 # Эта секция, кстати, для файлика build.rs, если правильно понял
 [build-dependencies]
