@@ -1,35 +1,35 @@
-// src/lib.rs
-
 use wasm_bindgen::prelude::*;
+use yew::prelude::*;
 
-// Сборка проекта с помощью wasm-pack:
-// > wasm-pack build --target web
+// Пока самая простая торисовка
 
-// На выходе должно быть такое:
+// Запуск как из урока 2, темы 3 теории: 
+// cd blog-wasm
+// wasm-pack build --target web
 
 // [INFO]: ⬇️  Installing wasm-bindgen...
 // [INFO]: Optimizing wasm binaries with `wasm-opt`...
 // [INFO]: Optional fields missing from Cargo.toml: 'description', 'repository', and 'license'. These are not necessary, but recommended
-// [INFO]: ✨   Done in 18.46s
-// [INFO]: 📦   Your wasm pkg is ready to publish at /home/m_rakul/Code/rust-yandex/theory/module_3/topic_4_cli_frontend/lesson_3_web_assembly/pkg.
+// [INFO]: ✨   Done in 1m 04s
+// [INFO]: 📦   Your wasm pkg is ready to publish at /home/m_rakul/Code/rust-yandex/practice/module_3_blog/blog-wasm/pkg.
 
+// И пускануть сервер:
+// python3 -m http.server 8000
 
-// Запустите локальный сервер (например, python3 -m http.server) и откройте http://localhost:8000/demo_multiple.html в браузере.
-// Вы должны увидеть следующий текст: «Привет, Мир! Rust говорит тебе: добро пожаловать в WebAssembly».
-
-// Указываем, что эту функцию можно вызывать из JS
-// #[wasm_bindgen]
-// pub fn greet(name: &str) -> String {
-//     format!("Привет, {name}! Rust говорит тебе: добро пожаловать в WebAssembly.")
-// }
-
-// src/lib.rs
-
-#[wasm_bindgen]
-pub fn greet(name: &str, count: u32) -> String {
-    let mut result = String::new();
-    for i in 0..count {
-        result.push_str(&format!("{}. Привет, {}! Rust в WebAssembly.\n", i + 1, name));
+#[function_component(App)]
+fn app() -> Html {
+    html! {
+        <div class="container">
+            <nav><h1>{"Блог, WASM с использованием фреймворка Yew"}</h1></nav>
+            <div class="form-card">
+                <h2>{"Yew запущен!"}</h2>
+                <p>{"Проверка стиля, отрисовка с помощью WASM."}</p>
+            </div>
+        </div>
     }
-    result
-} 
+}
+
+#[wasm_bindgen(start)]
+pub fn run_app() {
+    yew::Renderer::<App>::new().render();
+}
