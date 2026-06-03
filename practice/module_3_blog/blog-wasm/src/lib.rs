@@ -2,6 +2,7 @@ use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 // Импортируем функцию info! для логирования в браузерную консоль
 use log::info;
+use web_sys::HtmlInputElement;
 
 // Пока самая простая торисовка
 
@@ -20,6 +21,17 @@ use log::info;
 
 #[function_component(App)]
 fn app() -> Html {
+
+    // Состояния для полей регистрации
+    let reg_username = use_state(|| "".to_string());
+    let reg_email = use_state(|| "".to_string());
+    let reg_password = use_state(|| "".to_string());
+
+    // Состояние для полей логина
+    let login_username = use_state(|| "".to_string());
+    let login_password = use_state(|| "".to_string());
+
+
     // use_state - это хук, который позволяет компоненту хранить и изменять состояние
     // Он принимает замыкание, которое возвращает начальное значение (Option<String> == None)
     // То есть это вроде как объект c текущим значением и методами для его изменения
@@ -27,16 +39,48 @@ fn app() -> Html {
 
     // Обработчик события отправки формы регистрации (Callback, в общем)
     let on_register_submit = {
-        let feedback_msg = feedback_msg.clone();
+        let feedback_msg_clone = feedback_msg.clone();
+        let reg_username_clone = reg_username.clone();
+        let reg_email_clone = reg_email.clone(); 
+        let reg_password_clone = reg_password.clone();
+
         // Здесь event == SubmitEvent
         Callback::from(move |event: SubmitEvent| {
-            // Перезагрузка страницы, выключаем
+            // Перезагрузка страницы - OFF (надо )
             event.prevent_default();
 
             // Логируем сообщение в консоль браузера
             info!("Форма регистрации отправлена!");
-            // Новое значение feedback_msg (Some(...)) вызывает перерендеринг компонента App
-            feedback_msg.set(Some("Форма регистрации отправлена! (Еще не реализовано)".to_string()));
+
+            // Получаем значения из состояния
+            let username_val = (*reg_username_clone).clone();
+            let email_val = (*reg_email_clone).clone();
+            let _password_val = (*reg_password_clone).clone();
+            // Логируем без пароля
+            info!("Регистрация: Имя={}, Email={}, Пароль=(скрыт)", username_val, email_val);
+            // Новое значение feedback_msg (Some) вызывает перерендеринг компонента App
+            feedback_msg_clone.set(Some("Форма регистрации отправлена! (Еще не реализовано)".to_string()));
+        })
+    };
+
+    // Обработчик события отправки формы входа
+    let on_login_submit = {
+
+        let feedback_msg = feedback_msg.clone();
+        let login_username = login_username.clone(); // Клонируем для доступа в замыкании
+        let login_password = login_password.clone(); // Клонируем для доступа в замыкании
+
+        Callback::from(move |event: SubmitEvent| {
+            event.prevent_default(); // Предотвращаем перезагрузку
+            info!("Форма входа отправлена!");
+            
+            // Получаем значения из состояния
+            let username_val = (*login_username).clone();
+            let _password_val = (*login_password).clone();
+            // И лог в консоль (пароль не выводим напрямую)
+            info!("Логин: {}, Пароль: (скрыт)", username_val);
+            // Устанавливаем сообщение
+            feedback_msg.set(Some("Форма входа отправлена! (Еще не реализовано)".to_string()));
         })
     };
 
@@ -70,8 +114,25 @@ fn app() -> Html {
                     <input
                         type="text"             // Любой текст
                         id="reg_username"       // Идентификатор для label
-                        required=true           // Обязательное
-                        placeholder="Введите имя пользователя" // Подсказка внутри поля
+                        required=true
+                        placeholder="Введите имя пользователя"
+                        // Привязываем значение к состоянию
+                        value={(*reg_username).clone()}
+                        // (!) Обновляем состояние при вводе
+                        oninput={Callback::from({
+                            let reg_username = reg_username.clone();
+                            move |event: InputEvent| {
+                                // Или так::
+                                // let target = event.target().unwrap();
+                                // Тут динамическое преобразование типов, но с проверкой на компиляции
+                                // let input = target.dyn_into::<HtmlInputElement>().unwrap();
+
+                                // Это как в теории, тема 3, урок 7
+                                let input: HtmlInputElement = event.target_unchecked_into();
+                                // Забираем значение (ниже для полей всё аналогично)
+                                reg_username.set(input.value());
+                            }
+                        })}
                     />
                     <label for="reg_email">{"Email*"}</label>
                     <input
@@ -79,6 +140,16 @@ fn app() -> Html {
                         id="reg_email"
                         required=true
                         placeholder="Введите email"
+                        // Привязываем значение к состоянию
+                        value={(*reg_email).clone()}
+                        // (!) Обновляем состояние при вводе
+                        oninput={Callback::from({
+                            let reg_email = reg_email.clone();
+                            move |event: InputEvent| {
+                                let input: HtmlInputElement = event.target_unchecked_into();
+                                reg_email.set(input.value());
+                            }
+                        })}
                     />
                     <label for="reg_password">{"Пароль*"}</label>
                     <input
@@ -86,8 +157,59 @@ fn app() -> Html {
                         id="reg_password"
                         required=true
                         placeholder="Введите пароль"
+                        // Привязываем значение к состоянию
+                        value={(*reg_password).clone()}
+                        // Обновляем состояние при вводе
+                        oninput={Callback::from({
+                            let reg_password = reg_password.clone();
+                            move |event: InputEvent| {
+                                let input: HtmlInputElement = event.target_unchecked_into();
+                                reg_password.set(input.value());
+                            }
+                        })}
                     />
                     <button class="btn-primary" type="submit">{"Зарегистрироваться"}</button>
+                </form>
+            </div>
+            <div class="form-card">
+                <h2>{ "Вход" }</h2>
+                <form onsubmit={on_login_submit}>
+                    <label for="login_username">{"Имя пользователя*"}</label>
+                    <input
+                        type="text"
+                        id="login_username"
+                        required=true
+                        placeholder="Введите имя пользователя"
+                        // Привязываем значение к состоянию
+                        value={(*login_username).clone()}
+                        // Обновляем состояние при вводе
+                        oninput={Callback::from({
+                            let login_username = login_username.clone();
+                            move |event: InputEvent| {
+                                let input: HtmlInputElement = event.target_unchecked_into();
+                                login_username.set(input.value());
+                            }
+                        })}
+                    />
+                    <label for="login_password">{"Пароль*"}</label>
+                    <input
+                        type="password"
+                        id="login_password"
+                        required=true
+                        placeholder="Введите пароль"
+                        // Привязываем значение к состоянию
+                        value={(*login_password).clone()}
+                        // Обновляем состояние при вводе
+                        oninput={Callback::from({
+                            let login_password = login_password.clone();
+                            move |event: InputEvent| {
+                                let input: HtmlInputElement = event.target_unchecked_into();
+                                login_password.set(input.value());
+                            }
+                        })}
+
+                    />
+                    <button class="btn-primary" type="submit">{"Войти"}</button>
                 </form>
             </div>
         </div>
