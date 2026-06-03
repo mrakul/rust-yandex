@@ -11,6 +11,9 @@ reqwasm = {workspace = true}
 wasm-bindgen-futures.workspace = true
 web-sys.workspace = true
 wasm-logger = "0.2.0"
+# Для вывода сообщения в консоль (не сильно нужен)
+log = "0.4.30"
 
 [lib]
+# cdylib позволяет экспортировать функции в WASM-модуль для использования в JavaScript
 crate-type = ["cdylib"]
