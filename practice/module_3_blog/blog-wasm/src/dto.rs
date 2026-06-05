@@ -7,6 +7,13 @@ pub struct RegisterRequest {
     pub password: String,
 }
 
+// Логин отдельно
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct AuthResponse {
     pub token: String,

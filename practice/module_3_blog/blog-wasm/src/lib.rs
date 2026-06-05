@@ -6,7 +6,7 @@ use web_sys::HtmlInputElement;
 
 // DTO в отдельном файлике
 mod dto;
-use dto::{RegisterRequest, AuthResponse};
+use dto::{RegisterRequest, AuthResponse, LoginRequest};
 
 // Для HTTP-запросов
 use gloo_net::http::Request;
@@ -73,11 +73,14 @@ fn app() -> Html {
         }
     });
 
-
     // use_state - это хук, который позволяет компоненту хранить и изменять состояние
     // Он принимает замыкание, которое возвращает начальное значение (Option<String> == None)
     // То есть это вроде как объект c текущим значением и методами для его изменения
+
+    // Сообщение по нажатию кнопок, успех или ошибка, от этого зависит стиль в index.html
     let feedback_msg = use_state(|| None::<FeedbackMessage>);
+
+    /*** Регистрация ***/
 
     // Асинхронная функция для вызова API регистрации
     let register_user_callback = {
@@ -117,9 +120,9 @@ fn app() -> Html {
                             match response.json::<AuthResponse>().await {
                                 Ok(auth_resp) => {
                                     // Успешная регистрация
-                                    feedback_msg.set(Some(FeedbackMessage::Success("Вы успешно зарегистрировались! (Токен получен)".to_string())));
+                                    feedback_msg.set(Some(FeedbackMessage::Success("Вы успешно зарегистрировались (токен тоже получен)".to_string())));
                                     // (!) Вывод токена для отладки
-                                    info!("Вы успешно зарегистрировались!, token: {}", auth_resp.token);
+                                    info!("Вы успешно зарегистрировались. Токен: {}", auth_resp.token);
 
                                     // (!) Сохраняем токен
                                     match LocalStorage::set(BLOG_TOKEN_KEY, &auth_resp.token) {
@@ -192,6 +195,88 @@ fn app() -> Html {
         })
     };
 
+    /*** Логин и выход ***/
+
+    let login_user_callback = {
+
+        let login_username = login_username.clone();
+        let login_password = login_password.clone();
+        let feedback_msg = feedback_msg.clone();
+        let is_authenticated = is_authenticated.clone();
+        let current_username = current_username.clone();
+
+        Callback::from(move |_: SubmitEvent| {
+            let login_username = login_username.clone();
+            let login_password = login_password.clone();
+            let feedback_msg = feedback_msg.clone();
+            let is_authenticated = is_authenticated.clone();
+            let current_username = current_username.clone();
+
+            // По аналогии с регистрацией (TODO: можно ли вынести в общий код)
+            wasm_bindgen_futures::spawn_local(async move {
+                let request_payload = LoginRequest {
+                    username: (*login_username).clone(),
+                    password: (*login_password).clone(),
+                };
+
+                let request = Request::post("http://127.0.0.1:3000/api/auth/login")
+                    .header("Content-Type", "application/json")
+                    .json(&request_payload)
+                    .unwrap();
+
+                match request.send().await {
+                    Ok(response) => {
+                        if response.ok() {
+                            match response.json::<AuthResponse>().await {
+                                Ok(auth_resp) => {
+                                    feedback_msg.set(Some(FeedbackMessage::Success("Вы успешно вошли (токен получен)".to_string())));
+                                    // (!) Вывод токена для отладки
+                                    info!("Вы успешно вошли!, token: {}", auth_resp.token);
+
+                                    // Сохраняем всё так же, как при регистрации
+                                    match LocalStorage::set(BLOG_TOKEN_KEY, &auth_resp.token) {
+                                        Ok(()) => {
+                                            info!("Токен сохранен в LocalStorage при входе.");
+                                            if let Err(e) = LocalStorage::set(BLOG_USERNAME_KEY, &auth_resp.user.username) {
+                                                 info!("Ошибка сохранения имени пользователя при входе: {}", e);
+                                            } else {
+                                                current_username.set(Some(auth_resp.user.username.clone()));
+                                            }
+
+                                            // Обновляем состояние аутентификации
+                                            is_authenticated.set(true);
+                                        }
+                                        Err(error) => {
+                                            feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка сохранения токена при входе: {}", error))));
+                                            info!("Ошибка сохранения токена при входе: {}", error);
+                                        }
+                                    }
+                                }
+                                Err(error) => {
+                                    feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка парсинга ответа при входе: {}", error))));
+                                    info!("Ошибка парсинга ответа при входе: {}", error);
+                                }
+                            }
+                        } else {
+                            // Обработка 4XX
+                            let status = response.status();
+                            let text = response.text().await.unwrap();
+                            let error_msg = format!("Ошибка входа: ({}): {}", status, text);
+                            
+                            // Сообщение и лог
+                            feedback_msg.set(Some(FeedbackMessage::Error(error_msg)));
+                            info!("Ошибка входа: {}: {}", status, text);
+                        }
+                    }
+                    Err(e) => {
+                        feedback_msg.set(Some(FeedbackMessage::Error(format!("Сетевая ошибка при входе: {}", e))));
+                        info!("Сетевая ошибка при входе: {}", e);
+                    }
+                }
+            })
+        })
+    };
+
     // Обработчик события отправки формы входа
     let on_login_submit = {
 
@@ -202,14 +287,19 @@ fn app() -> Html {
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default(); // Предотвращаем перезагрузку
             info!("Форма входа отправлена!");
-            
-            // Получаем значения из состояния
-            let username_val = (*login_username).clone();
-            let _password_val = (*login_password).clone();
-            // И лог в консоль (пароль не выводим напрямую)
-            info!("Логин: {}, Пароль: (скрыт)", username_val);
-            // Устанавливаем сообщение
-            feedback_msg.set(Some(FeedbackMessage::Success("Форма входа отправлена! (Еще не реализовано)".to_string())));
+            // Наверное, не нужно, подумать
+            feedback_msg.set(None);
+
+            // Вызываем коллбек
+            login_user_callback.emit(event);
+
+            // // Получаем значения из состояния
+            // let username_val = (*login_username).clone();
+            // let _password_val = (*login_password).clone();
+            // // И лог в консоль (пароль не выводим напрямую)
+            // info!("Логин: {}, Пароль: (скрыт)", username_val);
+            // // Устанавливаем сообщение
+            // feedback_msg.set(Some(FeedbackMessage::Success("Форма входа отправлена! (Еще не реализовано)".to_string())));
         })
     };
 
