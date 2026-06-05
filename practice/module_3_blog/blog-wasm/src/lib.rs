@@ -281,8 +281,8 @@ fn app() -> Html {
     let on_login_submit = {
 
         let feedback_msg = feedback_msg.clone();
-        let login_username = login_username.clone();
-        let login_password = login_password.clone();
+        // let login_username = login_username.clone();
+        // let login_password = login_password.clone();
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default(); // Предотвращаем перезагрузку
@@ -323,6 +323,76 @@ fn app() -> Html {
         })
     };
 
+
+    /*** Посты ***/
+    // Состояние для хранения списка постов (используется в Callback, )
+    let posts = use_state(|| vec![]);
+    // Состояние для индикатора загрузки, не уверен, сильно нужен или нет
+    let loading_posts_indicator = use_state(|| false);
+
+    let load_posts = {
+        let posts = posts.clone();
+        let loading_posts = loading_posts_indicator.clone();
+        let feedback_msg = feedback_msg.clone();
+
+        Callback::from(move |_| {
+            let posts = posts.clone();
+            let loading_posts = loading_posts.clone();
+            let feedback_msg = feedback_msg.clone();
+
+            wasm_bindgen_futures::spawn_local(async move {
+                loading_posts.set(true);
+                feedback_msg.set(None);
+
+                // GET api/posts
+                let request = Request::get("http://127.0.0.1:3000/api/posts")
+                    .header("Content-Type", "application/json")
+                    .build()
+                    .unwrap();
+
+                match request.send().await {
+                    Ok(response) => {
+                        if response.ok() {
+                            match response.json::<dto::ListPostsResponse>().await {
+                                Ok(posts_list_response) => {
+                                    // Обновляем список
+                                    posts.set(posts_list_response.posts);
+                                    // info!("Список постов успешно загружен, количество: {}", posts_list_response.posts.len());
+                                }
+                                Err(error) => {
+                                    feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка парсинга списка постов: {}", error))));
+                                    info!("Ошибка парсинга списка постов: {}", error);
+                                }
+                            }
+                        } else {
+                            // 4XX
+                            let status = response.status();
+                            let text = response.text().await.unwrap();
+                            let error_msg = format!("Ошибка получения списка постов: ({}): {}", status, text);
+                            feedback_msg.set(Some(FeedbackMessage::Error(error_msg)));
+                            info!("Ошибка получения списка постов: {}: {}", status, text);
+                        }
+                    }
+                    Err(e) => {
+                        feedback_msg.set(Some(FeedbackMessage::Error(format!("Сетевая ошибка при получении постов: {}", e))));
+                        info!("Сетевая ошибка при получении постов: {}", e);
+                    }
+                }
+                loading_posts.set(false);
+            })
+        })
+    };
+
+    // (!) Начальная отрисовка постов: вызов через use_effect_with функции загрузки постов
+    // Хитрая конструкция, надо передать () как зависимость, чтобы пущануть один раз
+    {
+        let load_posts = load_posts.clone();
+        use_effect_with((), move |_| {
+            load_posts.emit(());
+            || ()
+        });
+    }
+
     // Можно отделить логику от общей части html!
     // Присваиваем элементу сообщения или html с сообщением, если есть. Или никакой (но надо вернуть пустой html!)
     let feedback_msg_html = if let Some(feedback) = (*feedback_msg).as_ref() {
@@ -350,7 +420,35 @@ fn app() -> Html {
         html! {}
     };
 
-    // Основная HTML-часть
+    // Список постов тоже выножу отдельно, чтобы не забивать основную часть html!
+    let posts_html = if *loading_posts_indicator {
+        html! { <div class="loading">{"Загрузка постов..."}</div> }
+    } else {
+        html! {
+            <div class="posts-container">
+                // Пока ещё public API без токена
+                <h2>{ "Список постов" }</h2>
+                <div class="posts-list">
+                    {
+                        posts.iter().map(|post| {
+                            // По каждому создаём элемент с соощением и собираем в коллекцию с .collect::<Html>
+                            html! {
+                                <div class="post-card">
+                                    <h3>{ &post.title }</h3>
+                                    <p>{ &post.content }</p>
+                                    <div class="post-meta">
+                                        <small>{ format!("ID: {}, Автор: {}", post.id, post.author_id) }</small>
+                                    </div>
+                                </div>
+                            }
+                        }).collect::<Html>()
+                    }
+                </div>
+            </div>
+        }
+    };
+
+    /*** Основная HTML-часть ***/
     html! {
         <div class="container">
             <nav>
@@ -371,110 +469,127 @@ fn app() -> Html {
             </nav>
             // (!) вставляем в разметку полученный VNode
             { feedback_msg_html }
-            <div class="form-card">
-                <h2>{ "Регистрация" }</h2>
-                <form onsubmit={on_register_submit}>
-                    <label for="reg_username">{"Имя пользователя*"}</label>
-                    <input
-                        type="text"             // Любой текст
-                        id="reg_username"       // Идентификатор для label
-                        required=true
-                        placeholder="Введите имя пользователя"
-                        // Привязываем значение к состоянию
-                        value={(*reg_username).clone()}
-                        // (!) Обновляем состояние при вводе
-                        oninput={Callback::from({
-                            let reg_username = reg_username.clone();
-                            move |event: InputEvent| {
-                                // Или так:
-                                // let target = event.target().unwrap();
-                                // Тут динамическое преобразование типов, но с проверкой на компиляции
-                                // let input = target.dyn_into::<HtmlInputElement>().unwrap();
+            
+            // Основной контейнер с двумя колонками: формы слева, посты справа
+            <div style="display: flex; gap: 20px;">
+                // Левая колонка: формы 
+                <div class="forms-column" style="flex: 1; min-width: 300px;">
+                    <div class="form-card">
+                        <h2>{ "Регистрация" }</h2>
+                        <form onsubmit={on_register_submit}>
+                            <label for="reg_username">{"Имя пользователя*"}</label>
+                            <input
+                                type="text"             // Любой текст
+                                id="reg_username"       // Идентификатор для label
+                                required=true           // Обязательное
+                                placeholder="Введите имя пользователя"
+                                // Привязываем значение к состоянию
+                                value={(*reg_username).clone()}
 
-                                // Это как в теории, тема 3, урок 7
-                                let input: HtmlInputElement = event.target_unchecked_into();
-                                // Забираем значение (ниже для полей всё аналогично)
-                                reg_username.set(input.value());
-                            }
-                        })}
-                    />
-                    <label for="reg_email">{"Email*"}</label>
-                    <input
-                        type="email"            // Проверится e-mail формат
-                        id="reg_email"
-                        required=true
-                        placeholder="Введите email"
-                        // Привязываем значение к состоянию
-                        value={(*reg_email).clone()}
-                        // (!) Обновляем состояние при вводе
-                        oninput={Callback::from({
-                            let reg_email = reg_email.clone();
-                            move |event: InputEvent| {
-                                let input: HtmlInputElement = event.target_unchecked_into();
-                                reg_email.set(input.value());
-                            }
-                        })}
-                    />
-                    <label for="reg_password">{"Пароль*"}</label>
-                    <input
-                        type="password"     // Парольный тип
-                        id="reg_password"
-                        required=true
-                        placeholder="Введите пароль"
-                        // Привязываем значение к состоянию
-                        value={(*reg_password).clone()}
-                        // Обновляем состояние при вводе
-                        oninput={Callback::from({
-                            let reg_password = reg_password.clone();
-                            move |event: InputEvent| {
-                                let input: HtmlInputElement = event.target_unchecked_into();
-                                reg_password.set(input.value());
-                            }
-                        })}
-                    />
-                    <button class="btn-primary" type="submit">{"Зарегистрироваться"}</button>
-                </form>
-            </div>
-            <div class="form-card">
-                <h2>{ "Вход" }</h2>
-                <form onsubmit={on_login_submit}>
-                    <label for="login_username">{"Имя пользователя*"}</label>
-                    <input
-                        type="text"
-                        id="login_username"
-                        required=true
-                        placeholder="Введите имя пользователя"
-                        // Привязываем значение к состоянию
-                        value={(*login_username).clone()}
-                        // Обновляем состояние при вводе
-                        oninput={Callback::from({
-                            let login_username = login_username.clone();
-                            move |event: InputEvent| {
-                                let input: HtmlInputElement = event.target_unchecked_into();
-                                login_username.set(input.value());
-                            }
-                        })}
-                    />
-                    <label for="login_password">{"Пароль*"}</label>
-                    <input
-                        type="password"
-                        id="login_password"
-                        required=true
-                        placeholder="Введите пароль"
-                        // Привязываем значение к состоянию
-                        value={(*login_password).clone()}
-                        // Обновляем состояние при вводе
-                        oninput={Callback::from({
-                            let login_password = login_password.clone();
-                            move |event: InputEvent| {
-                                let input: HtmlInputElement = event.target_unchecked_into();
-                                login_password.set(input.value());
-                            }
-                        })}
+                                // (!) Обновляем состояние при вводе
+                                oninput={Callback::from({
+                                    let reg_username = reg_username.clone();
+                                    
+                                    move |event: web_sys::InputEvent| {
+                                        // Или так:
+                                        // let target = event.target().unwrap();
+                                        // Тут динамическое преобразование типов, но с проверкой на компиляции
+                                        // let input = target.dyn_into::<HtmlInputElement>().unwrap();
 
-                    />
-                    <button class="btn-primary" type="submit">{"Войти"}</button>
-                </form>
+                                        // Это как в теории, тема 3, урок 7
+                                        let input: HtmlInputElement = event.target_unchecked_into();
+                                        // Забираем значение (ниже для полей всё аналогично)
+                                        reg_username.set(input.value());
+                                    }
+                                })}
+                            />
+                            <label for="reg_email">{"Email*"}</label>
+                            <input
+                                type="email"            // Проверится e-mail формат
+                                id="reg_email"
+                                required=true
+                                placeholder="Введите email"
+                                // Привязываем значение к состоянию
+                                value={(*reg_email).clone()}
+                                
+                                // (!) Обновляем состояние при вводе
+                                oninput={Callback::from({
+                                    let reg_email = reg_email.clone();
+                                    move |event: web_sys::InputEvent| {
+                                        let input: HtmlInputElement = event.target_unchecked_into();
+                                        reg_email.set(input.value());
+                                    }
+                                })}
+                            />
+                            <label for="reg_password">{"Пароль*"}</label>
+                            <input
+                                type="password"     // Парольный тип
+                                id="reg_password"
+                                required=true
+                                placeholder="Введите пароль"
+                                // Привязываем значение к состоянию
+                                value={(*reg_password).clone()}
+                                
+                                // (!) Обновляем состояние при вводе
+                                oninput={Callback::from({
+                                    let reg_password = reg_password.clone();
+                                    move |event: InputEvent| {
+                                        let input: HtmlInputElement = event.target_unchecked_into();
+                                        reg_password.set(input.value());
+                                    }
+                                })}
+                            />
+                            <button class="btn-primary" type="submit">{"Зарегистрироваться"}</button>
+                        </form>
+                    </div>
+
+                    // Карточка формы входа
+                    <div class="form-card">
+                        <h2>{ "Вход" }</h2>
+                        <form onsubmit={on_login_submit}>
+                            <label for="login_username">{"Имя пользователя*"}</label>
+                            <input
+                                type="text"
+                                id="login_username"
+                                required=true
+                                placeholder="Введите имя пользователя"
+                                // Привязываем значение к состоянию
+                                value={(*login_username).clone()}
+                                // (!) Обновляем состояние при вводе
+                                oninput={Callback::from({
+                                    let login_username = login_username.clone();
+                                    move |event: web_sys::InputEvent| {
+                                        let input: HtmlInputElement = event.target_unchecked_into();
+                                        login_username.set(input.value());
+                                    }
+                                })}
+                            />
+                            <label for="login_password">{"Пароль*"}</label>
+                            <input
+                                type="password"
+                                id="login_password"
+                                required=true
+                                placeholder="Введите пароль"
+                                // Привязываем значение к состоянию
+                                value={(*login_password).clone()}
+                                // (!) Обновляем состояние при вводе
+                                oninput={Callback::from({
+                                    let login_password = login_password.clone();
+                                    move |event: web_sys::InputEvent| {
+                                        let input: HtmlInputElement = event.target_unchecked_into();
+                                        login_password.set(input.value());
+                                    }
+                                })}
+                            />
+                            <button class="btn-primary" type="submit">{"Войти"}</button>
+                        </form>
+                    </div>
+                </div>
+
+                // Справа список постов
+                <div class="posts-column" style="flex: 2; min-width: 400px;">
+                    { posts_html }
+                </div>
             </div>
         </div>
     }
