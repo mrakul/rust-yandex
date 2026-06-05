@@ -16,6 +16,8 @@ log = "0.4.30"
 
 # Для HTTP-запросов
 gloo-net = { workspace = true }
+# Для хранения токена
+gloo-storage = "0.4.0"
 
 [lib]
 # cdylib позволяет экспортировать функции в WASM-модуль для использования в JavaScript

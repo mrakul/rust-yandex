@@ -10,6 +10,8 @@ use dto::{RegisterRequest, AuthResponse};
 
 // Для HTTP-запросов
 use gloo_net::http::Request;
+// Для хранения/чтения токена
+use gloo_storage::{Storage, LocalStorage};
 
 // Для вывода сообщения по запросам в разном стиле CSS - Success / Error
 #[derive(Clone)]
@@ -37,6 +39,11 @@ enum FeedbackMessage {
 // И пускануть сервер:
 // python3 -m http.server 8000
 
+
+// Для передачи при работе с токеном
+const BLOG_TOKEN_KEY:    &str = "blog_token";
+const BLOG_USERNAME_KEY: &str = "blog_username";
+
 #[function_component(App)]
 fn app() -> Html {
 
@@ -48,6 +55,23 @@ fn app() -> Html {
     // Состояние для полей логина
     let login_username = use_state(|| "".to_string());
     let login_password = use_state(|| "".to_string());
+
+    // Состояние для отслеживания аутентификации
+    let is_authenticated = use_state(|| {
+        // Проверяем наличие токена в LocalStorage
+        LocalStorage::get::<String>(BLOG_TOKEN_KEY).is_ok()
+    });
+
+    // Состояние для хранения имени пользователя (часть UserDto, можно остальное тоже докинуть)
+    let current_username = use_state(|| {
+        // Получить имя пользователя из LocalStorage 
+        // Если аутентифицированы, пытаемся получить имя из LocalStorage
+        if LocalStorage::get::<String>(BLOG_TOKEN_KEY).is_ok() {
+            LocalStorage::get::<String>(BLOG_USERNAME_KEY).ok()   // Предполагаем, что имя сохраняется отдельно
+        } else {
+             None
+        }
+    });
 
 
     // use_state - это хук, который позволяет компоненту хранить и изменять состояние
@@ -61,6 +85,8 @@ fn app() -> Html {
         let reg_email = reg_email.clone();
         let reg_password = reg_password.clone();
         let feedback_msg = feedback_msg.clone();
+        let is_authenticated = is_authenticated.clone();
+        let current_username = current_username.clone();
         
         // Callback::from преобразует замыкание в обработчик событий Yew
         Callback::from(move |event: web_sys::SubmitEvent| {
@@ -68,7 +94,8 @@ fn app() -> Html {
             let reg_email = reg_email.clone();
             let reg_password = reg_password.clone();
             let feedback_msg = feedback_msg.clone();
-            
+            let is_authenticated = is_authenticated.clone();
+            let current_username = current_username.clone();
             // Запускаем асинхронную задачу (как в теории )
             wasm_bindgen_futures::spawn_local(async move {
                 // Через DTO
@@ -94,7 +121,25 @@ fn app() -> Html {
                                     // (!) Вывод токена для отладки
                                     info!("Вы успешно зарегистрировались!, token: {}", auth_resp.token);
 
-                                    // TODO: тут сохраняем токен для отладки
+                                    // (!) Сохраняем токен
+                                    match LocalStorage::set(BLOG_TOKEN_KEY, &auth_resp.token) {
+                                        Ok(()) => {
+                                            info!("Токен сохранен в LocalStorage");
+                                            if let Err(error) = LocalStorage::set(BLOG_USERNAME_KEY, &auth_resp.user.username) {
+                                                // TODO: можно поменять на error, пока везде оставляю info!
+                                                 info!("Ошибка сохранения имени пользователя: {}", error);
+                                            } else {
+                                                current_username.set(Some(auth_resp.user.username.clone()));
+                                            }
+
+                                            // Обновляем состояние аутентификации
+                                            is_authenticated.set(true);
+                                        }
+                                        Err(error) => {
+                                            feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка сохранения токена: {}", error))));
+                                            info!("Ошибка сохранения токена: {}", error);
+                                        }
+                                    }
                                 }
                                 Err(error) => {
                                     feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка парсинга  ответа: {}", error))));
@@ -151,8 +196,8 @@ fn app() -> Html {
     let on_login_submit = {
 
         let feedback_msg = feedback_msg.clone();
-        let login_username = login_username.clone(); // Клонируем для доступа в замыкании
-        let login_password = login_password.clone(); // Клонируем для доступа в замыкании
+        let login_username = login_username.clone();
+        let login_password = login_password.clone();
 
         Callback::from(move |event: SubmitEvent| {
             event.prevent_default(); // Предотвращаем перезагрузку
@@ -165,6 +210,26 @@ fn app() -> Html {
             info!("Логин: {}, Пароль: (скрыт)", username_val);
             // Устанавливаем сообщение
             feedback_msg.set(Some(FeedbackMessage::Success("Форма входа отправлена! (Еще не реализовано)".to_string())));
+        })
+    };
+
+    // Выход из сессии - удаляем токен (и что ещё есть) из LocalStorage
+    let on_logout = {
+        let is_authenticated = is_authenticated.clone();
+        let current_username = current_username.clone();
+        let feedback_msg = feedback_msg.clone();
+
+        // (!) Тут нужен MouseEvent, чтобы в html! передать по onclick
+        Callback::from(move |event: web_sys::MouseEvent| {
+            // Удаляем токен и имя пользователя из LocalStorage
+            LocalStorage::delete(BLOG_TOKEN_KEY);
+            LocalStorage::delete(BLOG_USERNAME_KEY);
+            // Обновляем состояние аутентификации
+            is_authenticated.set(false);
+            current_username.set(None::<String>); // Явно устанавливаем None
+            // Показываем сообщение
+            feedback_msg.set(Some(FeedbackMessage::Success("Вы вышли из системы.".to_string())));
+            info!("Пользователь вышел из системы");
         })
     };
 
@@ -195,11 +260,23 @@ fn app() -> Html {
         html! {}
     };
 
+    // Основная HTML-часть
     html! {
         <div class="container">
             <nav>
                 <h1>{"Блог, WASM с использованием фреймворка Yew"}</h1>
                 <div>
+                    // Статус логина
+                    if *is_authenticated {
+                        if let Some(ref username) = (*current_username).as_ref() {
+                             <span class="auth-status">{format!("Пользователь: {}", username)}</span>
+                        } else {
+                            <span class="auth-status">{"Аутентифицирован"}</span>
+                        }
+                        <button class="btn-secondary" onclick={on_logout.clone()}>{"Выйти"}</button>
+                    } else {
+                        <span class="auth-status">{"Не вошли в систему"}</span>
+                    }
                 </div>
             </nav>
             // (!) вставляем в разметку полученный VNode

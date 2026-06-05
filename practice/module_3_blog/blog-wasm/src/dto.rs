@@ -10,12 +10,13 @@ pub struct RegisterRequest {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct AuthResponse {
     pub token: String,
-    user: UserDto
+    pub user: UserDto
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UserDto {
     id: i64,
-    username: String,
+    // Сохранякем только username
+    pub username: String,
     email: String,
 }
