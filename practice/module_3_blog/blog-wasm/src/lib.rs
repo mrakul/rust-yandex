@@ -6,7 +6,7 @@ use web_sys::HtmlInputElement;
 
 // DTO в отдельном файлике
 mod dto;
-use dto::{RegisterRequest, AuthResponse, LoginRequest};
+use dto::{RegisterRequest, AuthResponse, LoginRequest, CreatePostRequest};
 
 // Для HTTP-запросов
 use gloo_net::http::Request;
@@ -178,7 +178,7 @@ fn app() -> Html {
             event.prevent_default();
 
             // Логируем сообщение в консоль браузера
-            info!("Отправка формы регистрации!");
+            info!("Отправка формы регистрации...");
             // Вызываем функцию по обработке 
             register_user_callback.emit(event);
 
@@ -231,7 +231,7 @@ fn app() -> Html {
                                 Ok(auth_resp) => {
                                     feedback_msg.set(Some(FeedbackMessage::Success("Вы успешно вошли (токен получен)".to_string())));
                                     // (!) Вывод токена для отладки
-                                    info!("Вы успешно вошли!, token: {}", auth_resp.token);
+                                    info!("Вы успешно вошли, получен токен: {}", auth_resp.token);
 
                                     // Сохраняем всё так же, как при регистрации
                                     match LocalStorage::set(BLOG_TOKEN_KEY, &auth_resp.token) {
@@ -285,8 +285,8 @@ fn app() -> Html {
         // let login_password = login_password.clone();
 
         Callback::from(move |event: SubmitEvent| {
-            event.prevent_default(); // Предотвращаем перезагрузку
-            info!("Форма входа отправлена!");
+            event.prevent_default();    // Выкл перезагрузку страницы
+            info!("Форма входа отправлена...");
             // Наверное, не нужно, подумать
             feedback_msg.set(None);
 
@@ -299,7 +299,7 @@ fn app() -> Html {
             // // И лог в консоль (пароль не выводим напрямую)
             // info!("Логин: {}, Пароль: (скрыт)", username_val);
             // // Устанавливаем сообщение
-            // feedback_msg.set(Some(FeedbackMessage::Success("Форма входа отправлена! (Еще не реализовано)".to_string())));
+            // feedback_msg.set(Some(FeedbackMessage::Success("Форма входа отправлена (Еще не реализовано)".to_string())));
         })
     };
 
@@ -326,12 +326,13 @@ fn app() -> Html {
 
     /*** Посты ***/
     // Состояние для хранения списка постов (используется в Callback, )
-    let posts = use_state(|| vec![]);
+    let posts_list = use_state(|| vec![]);
     // Состояние для индикатора загрузки, не уверен, сильно нужен или нет
     let loading_posts_indicator = use_state(|| false);
 
-    let load_posts = {
-        let posts = posts.clone();
+    // Список постов
+    let posts_list_callback = {
+        let posts = posts_list.clone();
         let loading_posts = loading_posts_indicator.clone();
         let feedback_msg = feedback_msg.clone();
 
@@ -386,12 +387,92 @@ fn app() -> Html {
     // (!) Начальная отрисовка постов: вызов через use_effect_with функции загрузки постов
     // Хитрая конструкция, надо передать () как зависимость, чтобы пущануть один раз
     {
-        let load_posts = load_posts.clone();
+        let load_posts = posts_list_callback.clone();
         use_effect_with((), move |_| {
             load_posts.emit(());
             || ()
         });
     }
+
+    // Создание поста, состояния
+    let create_title = use_state(|| "".to_string());
+    let create_content = use_state(|| "".to_string());
+
+    let create_post_callback = {
+        let create_title = create_title.clone();
+        let create_content = create_content.clone();
+        let feedback_msg = feedback_msg.clone();
+        let posts_list_callback = posts_list_callback.clone();
+
+        // SubmitEvent
+        Callback::from(move |_: web_sys::SubmitEvent| {
+            let create_title = create_title.clone();
+            let create_content = create_content.clone();
+            let feedback_msg = feedback_msg.clone();
+            let posts_list_callback = posts_list_callback.clone();
+
+            wasm_bindgen_futures::spawn_local(async move {
+                // Получаем токен из LocalStorage для защищенного запроса
+                let token_from_local = match LocalStorage::get::<String>(BLOG_TOKEN_KEY) {
+                    Ok(token) => token,
+                    Err(_) => {
+                        feedback_msg.set(Some(FeedbackMessage::Error("Токен не найден. Пожалуйста, залогиньтесь.".to_string())));
+                        return;     // ()
+                    }
+                };
+
+                // Заполняем DTO
+                let request_payload = CreatePostRequest {
+                    title: (*create_title).clone(),
+                    content: (*create_content).clone(),
+                };
+
+                // POST api/posts с заголовком Authorization
+                let request = Request::post("http://127.0.0.1:3000/api/posts")
+                    .header("Content-Type", "application/json")
+                    // (!) Формат Bearer и отправка (&format для &str)
+                    .header("Authorization", &format!("Bearer {}", token_from_local))
+                    .json(&request_payload)
+                    .unwrap();
+
+                match request.send().await {
+                    Ok(response) => {
+                        if response.ok() {
+                            feedback_msg.set(Some(FeedbackMessage::Success("Пост успешно создан".to_string())));
+                            // Очищаем форму
+                            create_title.set("".to_string());
+                            create_content.set("".to_string());
+                            // (!) Обновляем список постов
+                            posts_list_callback.emit(());
+                        } else {
+                            // 4XX
+                            let status = response.status();
+                            let text = response.text().await.unwrap();
+                            feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка создания поста: ({}): {}", status, text))));
+                            info!("Ошибка создания поста: {}: {}", status, text);
+                        }
+                    }
+                    Err(error) => {
+                        feedback_msg.set(Some(FeedbackMessage::Error(format!("Сетевая ошибка при создании поста: {}", error))));
+                        info!("Сетевая ошибка при создании поста: {}", error);
+                    }
+                }
+            })
+        })
+    };
+
+    // Submit-коллбек
+    let on_create_post_submit = {
+        let create_post_callback = create_post_callback.clone();
+        Callback::from(move |event: web_sys::SubmitEvent| {
+            event.prevent_default();
+
+            info!("Отправка формы создания поста");
+            create_post_callback.emit(event);
+        })
+    };
+
+    /*** HTML-элементы, выделенные отдельно от общей логики html! */
 
     // Можно отделить логику от общей части html!
     // Присваиваем элементу сообщения или html с сообщением, если есть. Или никакой (но надо вернуть пустой html!)
@@ -430,7 +511,7 @@ fn app() -> Html {
                 <h2>{ "Список постов" }</h2>
                 <div class="posts-list">
                     {
-                        posts.iter().map(|post| {
+                        posts_list.iter().map(|post| {
                             // По каждому создаём элемент с соощением и собираем в коллекцию с .collect::<Html>
                             html! {
                                 <div class="post-card">
@@ -449,6 +530,7 @@ fn app() -> Html {
     };
 
     /*** Основная HTML-часть ***/
+    
     html! {
         <div class="container">
             <nav>
@@ -588,6 +670,52 @@ fn app() -> Html {
 
                 // Справа список постов
                 <div class="posts-column" style="flex: 2; min-width: 400px;">
+
+                    // Показываем форму, только если пользователь аутентифицирован
+                    if *is_authenticated {
+                        <div class="form-card">
+                            <h2>{ "Создать пост" }</h2>
+                            // Коллбек стандартно по OnSubmit
+                            <form onsubmit={on_create_post_submit}>
+                                <label for="create_title">{"Заголовок*"}</label>
+                                <input
+                                    type="text"
+                                    id="create_title"
+                                    required=true
+                                    placeholder="Введите заголовок"
+                                    value={(*create_title).clone()}
+                                    oninput={Callback::from({
+                                        let create_title = create_title.clone();
+                                        move |event: web_sys::InputEvent| {
+                                            let input: HtmlInputElement = event.target_unchecked_into();
+                                            create_title.set(input.value());
+                                        }
+                                    })}
+                                />
+                                <label for="create_content">{"Содержание*"}</label>
+                                // Используем textarea для многострочного ввода
+                                <textarea
+                                    id="create_content"
+                                    required=true
+                                    placeholder="Введите содержание"
+                                    rows=5  // 5 строк
+
+                                    value={(*create_content).clone()}
+                                    oninput={Callback::from({
+                                        let create_content = create_content.clone();
+                                        move |event: web_sys::InputEvent| {
+                                            // Для textarea нужен HtmlTextAreaElement, добавил в workspace
+                                            let input: web_sys::HtmlTextAreaElement = event.target_unchecked_into();
+                                            create_content.set(input.value());
+                                        }
+                                    })}
+                                />
+                                <button class="btn-primary" type="submit">{"Создать пост"}</button>
+                            </form>
+                        </div>
+                    }
+
+                    // Список постов под формой (если пользователь может добавлять)
                     { posts_html }
                 </div>
             </div>

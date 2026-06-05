@@ -30,7 +30,13 @@ reqwasm = "0.5"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 serde-wasm-bindgen = "0.6"
-web-sys = { version = "0.3", features = ["HtmlInputElement", "Event", "InputEvent", "console"] } # , "Window", "Storage"] }
+web-sys = { version = "0.3", features = [
+    "HtmlInputElement", "Event", "InputEvent", "console",
+    # Для многострочных полей, нужен для создания поста
+    "HtmlTextAreaElement"   
+    ] }
+    # , "Window", "Storage"] }
+
 # Для HTTP-запросов (WASM-часть)
 gloo-net = "0.6"
 

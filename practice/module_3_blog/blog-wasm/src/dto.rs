@@ -47,3 +47,9 @@ pub struct ListPostsResponse {
     pub limit: i64,
     pub offset: i64
 }
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct CreatePostRequest {
+    pub title: String,
+    pub content: String
+}
