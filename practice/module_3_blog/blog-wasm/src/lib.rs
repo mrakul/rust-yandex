@@ -594,34 +594,35 @@ fn app() -> Html {
                                     <div class="post-meta">
                                         <small>{ format!("ID: {}, Автор: {}", post.id, post.author_id) }</small>
                                     </div>
-                                </div>
-                                // (!) Кнопка удаления, по условию - логин + автор
-                                if *is_authenticated && is_author {
-                                    <button 
-                                        class="btn-danger"
-                                        style="margin-top: 10px; font-size: 0.8rem;"
-                                        onclick={Callback::from({
-                                            let delete_post_callback = delete_post_callback.clone();
-                                            let post_id = post.id;
-                                            move |_| {
-                                                // Подтверждение удаления
-                                                let confirmed_deletion = web_sys::window()
-                                                    // Да, с обработкой ошибкой можно поработать
-                                                    // .expect("Window object is not available")
-                                                    .unwrap()
-                                                    .confirm_with_message("Вы уверены, что хотите удалить этот пост?")
-                                                    .unwrap();
-                                                    // .unwrap_or(false);
-                                                
-                                                if confirmed_deletion {
-                                                    delete_post_callback.emit(post_id);
+                                    // (!) Кнопка удаления, по условию - логин + автор
+                                    // (переместил в div "post-card", чтобы был ближе к посту, или поправить в CSS)
+                                    if *is_authenticated && is_author {
+                                        <button 
+                                            class="btn-danger"
+                                            style="margin-top: 10px; font-size: 0.8rem;"
+                                            onclick={Callback::from({
+                                                let delete_post_callback = delete_post_callback.clone();
+                                                let post_id = post.id;
+                                                move |_| {
+                                                    // Подтверждение удаления
+                                                    let confirmed_deletion = web_sys::window()
+                                                        // С обработкой ошибкой можно поработать
+                                                        // .expect("Window object is not available")
+                                                        .unwrap()
+                                                        .confirm_with_message("Вы уверены, что хотите удалить этот пост?")
+                                                        .unwrap();
+                                                        // .unwrap_or(false);
+                                                    
+                                                    if confirmed_deletion {
+                                                        delete_post_callback.emit(post_id);
+                                                    }
                                                 }
-                                            }
-                                        })}
-                                    >
-                                    {"Удалить"}
-                                    </button>
-                                }
+                                            })}
+                                        >
+                                        {"Удалить"}
+                                        </button>
+                                    }
+                                </div>
                             </>
                             }
                         }).collect::<Html>()
