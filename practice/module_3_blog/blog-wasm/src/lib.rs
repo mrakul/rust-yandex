@@ -43,6 +43,7 @@ enum FeedbackMessage {
 // Для передачи при работе с токеном
 const BLOG_TOKEN_KEY:    &str = "blog_token";
 const BLOG_USERNAME_KEY: &str = "blog_username";
+const BLOG_USER_ID_KEY:  &str = "blog_user_id";
 
 #[function_component(App)]
 fn app() -> Html {
@@ -73,6 +74,15 @@ fn app() -> Html {
         }
     });
 
+    // Аналогично - User ID для сравнения для удаления/обновления поста
+    let current_user_id = use_state(|| {
+        if LocalStorage::get::<String>(BLOG_TOKEN_KEY).is_ok() {
+            LocalStorage::get::<i64>(BLOG_USER_ID_KEY).ok()
+        } else {
+            None
+        }
+    });
+
     // use_state - это хук, который позволяет компоненту хранить и изменять состояние
     // Он принимает замыкание, которое возвращает начальное значение (Option<String> == None)
     // То есть это вроде как объект c текущим значением и методами для его изменения
@@ -90,6 +100,7 @@ fn app() -> Html {
         let feedback_msg = feedback_msg.clone();
         let is_authenticated = is_authenticated.clone();
         let current_username = current_username.clone();
+        let current_user_id = current_user_id.clone();
         
         // Callback::from преобразует замыкание в обработчик событий Yew
         Callback::from(move |event: web_sys::SubmitEvent| {
@@ -99,6 +110,8 @@ fn app() -> Html {
             let feedback_msg = feedback_msg.clone();
             let is_authenticated = is_authenticated.clone();
             let current_username = current_username.clone();
+            let current_user_id = current_user_id.clone();
+
             // Запускаем асинхронную задачу (как в теории )
             wasm_bindgen_futures::spawn_local(async move {
                 // Через DTO
@@ -134,6 +147,10 @@ fn app() -> Html {
                                             } else {
                                                 current_username.set(Some(auth_resp.user.username.clone()));
                                             }
+
+                                            // Аналогично, сохраняем User ID
+                                            LocalStorage::set(BLOG_USER_ID_KEY, &auth_resp.user.id).ok();
+                                            current_user_id.set(Some(auth_resp.user.id));
 
                                             // Обновляем состояние аутентификации
                                             is_authenticated.set(true);
@@ -198,12 +215,12 @@ fn app() -> Html {
     /*** Логин и выход ***/
 
     let login_user_callback = {
-
         let login_username = login_username.clone();
         let login_password = login_password.clone();
         let feedback_msg = feedback_msg.clone();
         let is_authenticated = is_authenticated.clone();
         let current_username = current_username.clone();
+        let current_user_id = current_user_id.clone();
 
         Callback::from(move |_: SubmitEvent| {
             let login_username = login_username.clone();
@@ -211,6 +228,7 @@ fn app() -> Html {
             let feedback_msg = feedback_msg.clone();
             let is_authenticated = is_authenticated.clone();
             let current_username = current_username.clone();
+            let current_user_id = current_user_id.clone();
 
             // По аналогии с регистрацией (TODO: можно ли вынести в общий код)
             wasm_bindgen_futures::spawn_local(async move {
@@ -242,6 +260,10 @@ fn app() -> Html {
                                             } else {
                                                 current_username.set(Some(auth_resp.user.username.clone()));
                                             }
+
+                                            // Аналогично, сохраняем User ID
+                                            LocalStorage::set(BLOG_USER_ID_KEY, &auth_resp.user.id).ok();
+                                            current_user_id.set(Some(auth_resp.user.id));
 
                                             // Обновляем состояние аутентификации
                                             is_authenticated.set(true);
@@ -387,9 +409,9 @@ fn app() -> Html {
     // (!) Начальная отрисовка постов: вызов через use_effect_with функции загрузки постов
     // Хитрая конструкция, надо передать () как зависимость, чтобы пущануть один раз
     {
-        let load_posts = posts_list_callback.clone();
+        let posts_list_callback = posts_list_callback.clone();
         use_effect_with((), move |_| {
-            load_posts.emit(());
+            posts_list_callback.emit(());
             || ()
         });
     }
@@ -461,7 +483,7 @@ fn app() -> Html {
         })
     };
 
-    // Submit-коллбек
+    // Submit-коллбек (Create)
     let on_create_post_submit = {
         let create_post_callback = create_post_callback.clone();
         Callback::from(move |event: web_sys::SubmitEvent| {
@@ -469,6 +491,48 @@ fn app() -> Html {
 
             info!("Отправка формы создания поста");
             create_post_callback.emit(event);
+        })
+    };
+
+
+    // Удаление поста
+    let delete_post_callback = {
+        let feedback_msg = feedback_msg.clone();
+        let posts_list_callback = posts_list_callback.clone();
+
+        Callback::from(move |post_id: i64| {
+            let feedback_msg = feedback_msg.clone();
+            let posts_list_callback = posts_list_callback.clone();
+
+            wasm_bindgen_futures::spawn_local(async move {
+                let token = match LocalStorage::get::<String>(BLOG_TOKEN_KEY) {
+                    Ok(token) => token,
+                    Err(_) => {
+                        feedback_msg.set(Some(FeedbackMessage::Error("Нет токена".to_string())));
+                        return;
+                    }
+                };
+
+                let url = format!("http://127.0.0.1:3000/api/posts/{}", post_id);
+                let request = Request::delete(&url)
+                    .header("Authorization", &format!("Bearer {}", token))
+                    .build()
+                    .unwrap();
+
+                match request.send().await {
+                    Ok(response) => {
+                        if response.ok() {
+                            feedback_msg.set(Some(FeedbackMessage::Success("Пост удален".to_string())));
+                            // Обновляем список
+                            posts_list_callback.emit(());
+                        } else {
+                            let text = response.text().await.unwrap_or_default();
+                            feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка удаления: {}", text))));
+                        }
+                    }
+                    Err(error) => feedback_msg.set(Some(FeedbackMessage::Error(format!("Сеть, ошибка: {}", error)))),
+                }
+            })
         })
     };
 
@@ -512,8 +576,18 @@ fn app() -> Html {
                 <div class="posts-list">
                     {
                         posts_list.iter().map(|post| {
+                                // Проверяем по каждому, что пользователь - автор поста
+                            let is_author = if let Some(uid_from_state) = *current_user_id {
+                                uid_from_state == post.author_id
+                            } else {
+                                false
+                            };
+
                             // По каждому создаём элемент с соощением и собираем в коллекцию с .collect::<Html>
                             html! {
+                                // Здесь хитрая конструкция, поскольку добавляем кнопку, и нужно отобразить два родственных элемента: мету и кнопку.
+                                // Надо обрамить всё Fragment <></> с одним root-узлом, не добавляя дополнительный элемент в DOM браузера
+                                <> 
                                 <div class="post-card">
                                     <h3>{ &post.title }</h3>
                                     <p>{ &post.content }</p>
@@ -521,6 +595,34 @@ fn app() -> Html {
                                         <small>{ format!("ID: {}, Автор: {}", post.id, post.author_id) }</small>
                                     </div>
                                 </div>
+                                // (!) Кнопка удаления, по условию - логин + автор
+                                if *is_authenticated && is_author {
+                                    <button 
+                                        class="btn-danger"
+                                        style="margin-top: 10px; font-size: 0.8rem;"
+                                        onclick={Callback::from({
+                                            let delete_post_callback = delete_post_callback.clone();
+                                            let post_id = post.id;
+                                            move |_| {
+                                                // Подтверждение удаления
+                                                let confirmed_deletion = web_sys::window()
+                                                    // Да, с обработкой ошибкой можно поработать
+                                                    // .expect("Window object is not available")
+                                                    .unwrap()
+                                                    .confirm_with_message("Вы уверены, что хотите удалить этот пост?")
+                                                    .unwrap();
+                                                    // .unwrap_or(false);
+                                                
+                                                if confirmed_deletion {
+                                                    delete_post_callback.emit(post_id);
+                                                }
+                                            }
+                                        })}
+                                    >
+                                    {"Удалить"}
+                                    </button>
+                                }
+                            </>
                             }
                         }).collect::<Html>()
                     }

@@ -23,7 +23,7 @@ pub struct AuthResponse {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UserDto {
-    id: i64,
+    pub id: i64,
     // Сохранякем только username
     pub username: String,
     email: String

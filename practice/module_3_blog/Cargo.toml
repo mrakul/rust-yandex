@@ -33,9 +33,11 @@ serde-wasm-bindgen = "0.6"
 web-sys = { version = "0.3", features = [
     "HtmlInputElement", "Event", "InputEvent", "console",
     # Для многострочных полей, нужен для создания поста
-    "HtmlTextAreaElement"   
+    "HtmlTextAreaElement",
+    # Для подтверждения удаления, всплывающее окно
+    "Window"
     ] }
-    # , "Window", "Storage"] }
+    # , , "Storage"] }
 
 # Для HTTP-запросов (WASM-часть)
 gloo-net = "0.6"
