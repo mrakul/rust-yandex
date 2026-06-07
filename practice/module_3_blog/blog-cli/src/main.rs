@@ -98,8 +98,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Transport::Http(cli.server)
     };
     
-    let mut client = BlogClient::new(transport)?;
-    
+    // Переделал под асинхронный вариант с await из-за gRPC'шного connect
+    let mut client = BlogClient::new(transport).await?;
+
     // Прочитать токен из файла
     if let Ok(token) = read_token_from_file() {
         client.set_token(token);
