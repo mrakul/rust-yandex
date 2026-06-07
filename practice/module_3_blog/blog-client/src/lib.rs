@@ -1,13 +1,18 @@
 mod error;
 mod http_client;
-// mod grpc_client;
+mod grpc_client;
 
 pub use error::BlogClientError;
 pub use http_client::HttpClient;
-// pub use grpc_client::GrpcClient;
+pub use grpc_client::GrpcClient;
 
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+
+// Включаем сгенерированный код из build.rs
+pub mod generated {
+    tonic::include_proto!("blog");
+}
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,33 +56,36 @@ pub enum Transport {
 }
 
 // Клиент: тип протокола, HTTP/gRPC, токен
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct BlogClient {
     transport: Transport,
     http_client: Option<HttpClient>,
-    // grpc_client: Option<GrpcClient>,
+    grpc_client: Option<GrpcClient>,
     token: Option<String>
 }
 
 impl BlogClient {
     // Создание нового клиента в зависимости от транспорта
-    pub fn new(transport: Transport) -> Result<Self, BlogClientError> {
-        match &transport {
-            Transport::Http(base_url) => {
-                let http_client = HttpClient::new(base_url.clone())?;
-                Ok(Self {
-                    transport,
-                    http_client: Some(http_client),
-                    // grpc_client: None,
-                    token: None,
-                })
+    pub async fn new(transport: Transport) -> Result<Self, BlogClientError> {
+        let (http_client, grpc_client) = match &transport {
+            Transport::Http(server_addr) => {
+                // Тут важно, что ?, чтобы вернуть "распакованный" Result
+                (Some(HttpClient::new(server_addr.clone())?), None)
             }
+            Transport::Grpc(server_addr) => {
+                // Делаем connect при создании клиента
+                let grpc_client = GrpcClient::new(server_addr.clone()).await?;
+                (None, Some(grpc_client))
+            }
+        };
 
-            Transport::Grpc(_addr) => {
-                // TODO: gRPC пока заглушка
-                Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into()))
-            }
-        }
+        // В Option или один, или другой тип клиента
+        Ok(Self {
+            transport,
+            http_client,
+            grpc_client,
+            token: None,
+        })
     }
 
     pub fn set_token(&mut self, token: String) {
@@ -85,7 +93,12 @@ impl BlogClient {
 
         // Мутабельная ссылка
         if let Some(http_client) = &mut self.http_client {
-            http_client.set_token(token);
+            http_client.set_token(token.clone());
+        }
+
+        // Аналогично для gRPC
+        if let Some(grpc) = &mut self.grpc_client {
+            grpc.set_token(token);
         }
     }
 
@@ -94,7 +107,7 @@ impl BlogClient {
     }
 
     // Регистрация
-    pub async fn register(&self,
+    pub async fn register(&mut self,
                           username: String,
                           email: String,
                           password: String) -> Result<AuthResponse, BlogClientError>
@@ -102,39 +115,57 @@ impl BlogClient {
         match &self.transport {
             Transport::Http(_) => {
                 if let Some(client) = &self.http_client {
-                    client.register(username, email, password).await
+                   let auth_response = client.register(username, email, password).await?;
+                   self.set_token(auth_response.token.clone());
+                   Ok(auth_response)
                 } else {
-                    // Например, пока не сделана gRPC часть
                     Err(BlogClientError::InvalidState("HTTP-клиент не инициализирован".into()))
                 }
             }
-
             // TODO: gRPC пока заглушка
-            Transport::Grpc(_) => Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into())),
+            Transport::Grpc(_) => {
+                if let Some(grpc_client) = &mut self.grpc_client {
+                    let auth_response = grpc_client.register(username, email, password).await?;
+                // Сохраняем токен - сделал внутри
+                    // self.set_token(auth_response.token.clone());
+                    Ok(auth_response)
+                } else {
+                    Err(BlogClientError::InvalidState("gRPC-клиент не инициализирован".into()))
+                }
+            }
         }
     }
 
-    pub async fn login(&self,
+    pub async fn login(&mut self,
                        username: String,
                        password: String) -> Result<AuthResponse, BlogClientError>
     {
         match &self.transport {
             Transport::Http(_) => {
-                if let Some(client) = &self.http_client {
-                    client.login(username, password).await
+                if let Some(client) = &mut self.http_client { // Use &mut for http client
+                    let auth_response = client.login(username, password).await?;
+                    self.set_token(auth_response.token.clone());
+                    Ok(auth_response)
                 } else {
                     Err(BlogClientError::InvalidState("HTTP-клиент не инициализирован".into()))
                 }
             }
 
-            // TODO: gRPC пока заглушка
-            Transport::Grpc(_) => Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into())),
+            Transport::Grpc(_) => {
+                if let Some(client) = &mut self.grpc_client {
+                    let auth_response = client.login(username, password).await?;
+                    self.set_token(auth_response.token.clone());
+                    Ok(auth_response)
+                } else {
+                    Err(BlogClientError::InvalidState("gRPC-клиент не инициализирован".into()))
+                }
+            }
         }
     }
 
     /*** Методы постов ***/
 
-    pub async fn create_post(&self,
+    pub async fn create_post(&mut self,
                              title: String,
                              content: String) -> Result<Post, BlogClientError>
     {
@@ -146,11 +177,17 @@ impl BlogClient {
                     Err(BlogClientError::InvalidState("HTTP-клиент не инициализирован".into()))
                 }
             }
-            Transport::Grpc(_) => Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into())),
+            Transport::Grpc(_) => {
+                if let Some(client) = &mut self.grpc_client {
+                    client.create_post(title, content).await
+                } else {
+                    Err(BlogClientError::InvalidState("gRPC-клиент не инициализирован".into()))
+                }
+            }
         }
     }
 
-    pub async fn get_post(&self, id: i64) -> Result<Post, BlogClientError> {
+    pub async fn get_post(&mut self, id: i64) -> Result<Post, BlogClientError> {
         match &self.transport {
             Transport::Http(_) => {
                 if let Some(client) = &self.http_client {
@@ -159,11 +196,17 @@ impl BlogClient {
                     Err(BlogClientError::InvalidState("HTTP-клиент не инициализирован".into()))
                 }
             }
-            Transport::Grpc(_) => Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into())),
+            Transport::Grpc(_) => {
+                if let Some(client) = &mut self.grpc_client {
+                    client.get_post(id).await
+                } else {
+                    Err(BlogClientError::InvalidState("gRPC-клиент не инициализирован".into()))
+                }
+            }
         }
     }
 
-    pub async fn update_post(&self,
+    pub async fn update_post(&mut self,
                              id: i64,
                              title: Option<String>,
                              content: Option<String>) -> Result<Post, BlogClientError>
@@ -176,11 +219,17 @@ impl BlogClient {
                     Err(BlogClientError::InvalidState("HTTP-клиент не инициализирован".into()))
                 }
             }
-            Transport::Grpc(_) => Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into())),
+            Transport::Grpc(_) => {
+                if let Some(client) = &mut self.grpc_client {
+                    client.update_post(id, title, content).await
+                } else {
+                    Err(BlogClientError::InvalidState("gRPC-клиент не инициализирован".into()))
+                }
+            }
         }
     }
 
-    pub async fn delete_post(&self, id: i64) -> Result<(), BlogClientError> {
+    pub async fn delete_post(&mut self, id: i64) -> Result<(), BlogClientError> {
         match &self.transport {
             Transport::Http(_) => {
                 if let Some(client) = &self.http_client {
@@ -189,11 +238,17 @@ impl BlogClient {
                     Err(BlogClientError::InvalidState("HTTP-клиент не инициализирован".into()))
                 }
             }
-            Transport::Grpc(_) => Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into())),
+            Transport::Grpc(_) => {
+                if let Some(client) = &mut self.grpc_client {
+                    client.delete_post(id).await 
+                } else {
+                    Err(BlogClientError::InvalidState("gRPC-клиент не инициализирован".into()))
+                }
+            }
         }
     }
 
-    pub async fn list_posts(&self,
+    pub async fn list_posts(&mut self,
                             limit: Option<i64>,
                             offset: Option<i64>) -> Result<ListPostsResponse, BlogClientError>
     {
@@ -205,7 +260,13 @@ impl BlogClient {
                     Err(BlogClientError::InvalidState("HTTP-клиент не инициализирован".into()))
                 }
             }
-            Transport::Grpc(_) => Err(BlogClientError::UnsupportedTransport("gRPC пока не реализован".into())),
+            Transport::Grpc(_) => {
+                if let Some(client) = &mut self.grpc_client {
+                    client.list_posts(limit.unwrap_or(10), offset.unwrap_or(0)).await
+                } else {
+                    Err(BlogClientError::InvalidState("gRPC-клиент не инициализирован".into()))
+                }
+            }
         }
     }
 }

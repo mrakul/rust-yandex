@@ -100,8 +100,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let mut client = BlogClient::new(transport)?;
     
-    // Try to load saved token
-    if let Ok(token) = load_token() {
+    // Прочитать токен из файла
+    if let Ok(token) = read_token_from_file() {
         client.set_token(token);
     }
     
@@ -248,7 +248,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 // Пишем в файлик в рабочей директории
 const TOKEN_FILE_NAME: &str = ".blog_token";
 
-fn load_token() -> Result<String, Box<dyn std::error::Error>> {
+fn read_token_from_file() -> Result<String, Box<dyn std::error::Error>> {
     let token = fs::read_to_string(TOKEN_FILE_NAME)?;
     Ok(token.trim().to_string())
 }

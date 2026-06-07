@@ -33,8 +33,8 @@ pub enum BlogClientError {
     UnexpectedStatus(u16),
     
     // Пока возвращается для gRPC
-    #[error("Unsupported transport: {0}")]
-    UnsupportedTransport(String),
+    #[error("gRPC error: {0}")]
+    GrpcError(String),
     
     #[error("Invalid state: {0}")]
     InvalidState(String)
