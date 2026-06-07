@@ -1,6 +1,3 @@
-//! Blog client library supporting both HTTP and gRPC transports.
-//! Provides unified API for interacting with the blog server.
-
 mod error;
 mod http_client;
 // mod grpc_client;

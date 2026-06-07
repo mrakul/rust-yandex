@@ -11,9 +11,11 @@ actix-cors = { workspace = true }
 # actix-web-httpauth = { workspace = true }
 async-trait = { workspace = true }
 
-# gRPC
-# tonic = { workspace = true }
-# prost = { workspace = true }
+# Для gRPC
+# gRPC клиент/сервер
+tonic = { workspace = true }
+# ProtoBuf
+prost = { workspace = true }
 # prost-types = { workspace = true }
 
 # БД
@@ -38,6 +40,7 @@ tokio = { workspace = true }
 time = { workspace = true }
 # Его отдельно для Bearer'а 
 actix-web-httpauth = "0.8.2"
+
 
 # Эти зависимости только для build.rs
 [build-dependencies]

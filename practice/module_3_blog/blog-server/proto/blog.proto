@@ -3,7 +3,7 @@ syntax = "proto3";
 package blog;
 
 service BlogService {
-  // Аутентификация
+  // Регистрация, логин
   rpc Register(RegisterRequest) returns (AuthResponse);
   rpc Login(LoginRequest) returns (AuthResponse);
 
@@ -35,13 +35,13 @@ message User {
   string created_at = 4;
 }
 
-// Здесь получаем токен (пока разобраться, делать ли в HTTP ?)
+// Здесь получаем токен
 message AuthResponse {
   string token = 1;
   User user = 2;
 }
 
-// Сообщения постов - ещё подумать
+// Сообщения постов
 message Post {
   int64 id = 1;
   string title = 2;
