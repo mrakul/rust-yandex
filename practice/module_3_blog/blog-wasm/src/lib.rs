@@ -769,8 +769,8 @@ fn app() -> Html {
             
             // Основной контейнер с двумя колонками: формы слева, посты справа
             <div style="display: flex; gap: 20px;">
-                // Левая колонка: формы 
-                <div class="forms-column" style="flex: 1; min-width: 300px;">
+                // Левая колонка: формы
+                    <div class="forms-column" style="flex: 0.7; min-width: 200px; max-width: 300px;">
                     <div class="form-card">
                         <h2>{ "Регистрация" }</h2>
                         <form onsubmit={on_register_submit}>
@@ -779,7 +779,7 @@ fn app() -> Html {
                                 type="text"             // Любой текст
                                 id="reg_username"       // Идентификатор для label
                                 required=true           // Обязательное
-                                placeholder="Введите имя пользователя"
+                                placeholder="Введите имя"
                                 // Привязываем значение к состоянию
                                 value={(*reg_username).clone()}
 
@@ -836,7 +836,7 @@ fn app() -> Html {
                                     }
                                 })}
                             />
-                            <button class="btn-primary" type="submit">{"Зарегистрироваться"}</button>
+                            <button class="btn-primary" style="padding: 8px 16px; font-size: 0.9rem;" type="submit">{"Зарегистрироваться"}</button>
                         </form>
                     </div>
 
@@ -849,7 +849,7 @@ fn app() -> Html {
                                 type="text"
                                 id="login_username"
                                 required=true
-                                placeholder="Введите имя пользователя"
+                                placeholder="Введите имя"
                                 // Привязываем значение к состоянию
                                 value={(*login_username).clone()}
                                 // (!) Обновляем состояние при вводе
@@ -878,13 +878,13 @@ fn app() -> Html {
                                     }
                                 })}
                             />
-                            <button class="btn-primary" type="submit">{"Войти"}</button>
+                            <button class="btn-primary" style="padding: 8px 16px; font-size: 0.9rem;" type="submit">{"Войти"}</button>
                         </form>
                     </div>
                 </div>
 
-                // Справа список постов
-                <div class="posts-column" style="flex: 2; min-width: 400px;">
+                // Справа список постов, пошире
+                <div class="posts-column" style="flex: 3; min-width: 500px;">
 
                     // Показываем форму, только если пользователь аутентифицирован
                     if *is_authenticated {
@@ -917,7 +917,7 @@ fn app() -> Html {
                                     id="create_content"
                                     required=true
                                     placeholder="Введите содержание"
-                                    rows=5  // 5 строк
+                                    rows=3  // 3 строки
 
                                     value={(*create_content).clone()}
                                     oninput={Callback::from({
