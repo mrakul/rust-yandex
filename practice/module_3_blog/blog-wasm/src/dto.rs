@@ -30,7 +30,7 @@ pub struct UserDto {
 }
 
 // Посты
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct PostPublic {
     pub id: i64,
     pub title: String,
@@ -49,7 +49,7 @@ pub struct ListPostsResponse {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct CreatePostRequest {
+pub struct CreateEditPostRequest {
     pub title: String,
     pub content: String
 }

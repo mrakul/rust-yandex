@@ -6,7 +6,7 @@ use web_sys::HtmlInputElement;
 
 // DTO в отдельном файлике
 mod dto;
-use dto::{RegisterRequest, AuthResponse, LoginRequest, CreatePostRequest};
+use dto::{RegisterRequest, AuthResponse, LoginRequest, CreateEditPostRequest};
 
 // Для HTTP-запросов
 use gloo_net::http::Request;
@@ -419,17 +419,21 @@ fn app() -> Html {
     // Создание поста, состояния
     let create_title = use_state(|| "".to_string());
     let create_content = use_state(|| "".to_string());
+    // Для изменения поста
+    let editing_post_id = use_state(|| None::<i64>);
 
-    let create_post_callback = {
+    let create_edit_post_callback = {
         let create_title = create_title.clone();
         let create_content = create_content.clone();
         let feedback_msg = feedback_msg.clone();
+        let editing_post_id = editing_post_id.clone(); // Клонируем для проверки режима
         let posts_list_callback = posts_list_callback.clone();
 
         // SubmitEvent
         Callback::from(move |_: web_sys::SubmitEvent| {
             let create_title = create_title.clone();
             let create_content = create_content.clone();
+            let editing_post_id = editing_post_id.clone(); // Клонируем для проверки режима
             let feedback_msg = feedback_msg.clone();
             let posts_list_callback = posts_list_callback.clone();
 
@@ -443,24 +447,68 @@ fn app() -> Html {
                     }
                 };
 
+                // Базовая валидация
+                if (*create_title).is_empty() || (*create_content).is_empty() {
+                    feedback_msg.set(Some(FeedbackMessage::Error("Заголовок и содержание не могут быть пустыми".to_string())));
+                    return; // ()
+                }
+
+                // Создание/обновление => PUT / POST, API и разные сообщения
+                let is_edit_post_mode = editing_post_id.is_some();
+
+                let url_server_api = if is_edit_post_mode {
+                    format!("http://127.0.0.1:3000/api/posts/{}", editing_post_id.unwrap())
+                } else {
+                    "http://127.0.0.1:3000/api/posts".to_string()
+                };
+
                 // Заполняем DTO
-                let request_payload = CreatePostRequest {
+                let request_payload = CreateEditPostRequest {
                     title: (*create_title).clone(),
                     content: (*create_content).clone(),
                 };
 
-                // POST api/posts с заголовком Authorization
-                let request = Request::post("http://127.0.0.1:3000/api/posts")
-                    .header("Content-Type", "application/json")
-                    // (!) Формат Bearer и отправка (&format для &str)
-                    .header("Authorization", &format!("Bearer {}", token_from_local))
-                    .json(&request_payload)
-                    .unwrap();
+                let request_result = if is_edit_post_mode {
+                // Посылаем PUT для обновления
+                    Request::put(&url_server_api)
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", &format!("Bearer {}", token_from_local)) // (!) Интеграция токена
+                        .json(&request_payload)
+                        .unwrap()
+                        .send()
+                        .await
+                } else {
+                    // Посылаем POSTдля создания
+                    Request::post(&url_server_api)
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", &format!("Bearer {}", token_from_local)) // (!) Интеграция токена
+                        .json(&request_payload)
+                        .unwrap()
+                        .send()
+                        .await
+                };
 
-                match request.send().await {
+                // POST api/posts с заголовком Authorization
+                // let request = Request::post("http://127.0.0.1:3000/api/posts")
+                //     .header("Content-Type", "application/json")
+                //     // (!) Формат Bearer и отправка (&format для &str)
+                //     .header("Authorization", &format!("Bearer {}", token_from_local))
+                //     .json(&request_payload)
+                //     .unwrap();
+
+                match request_result {
+                // match request.send().await {
                     Ok(response) => {
                         if response.ok() {
-                            feedback_msg.set(Some(FeedbackMessage::Success("Пост успешно создан".to_string())));
+                            // Обновление / создание
+                            if is_edit_post_mode {
+                                feedback_msg.set(Some(FeedbackMessage::Success("Пост успешно обновлен".to_string())));
+                                // Сбрасываем ID редактируемого поста после успешного обновления
+                                editing_post_id.set(None);
+                            } else {
+                                feedback_msg.set(Some(FeedbackMessage::Success("Пост успешно создан".to_string())));
+                            }
+
                             // Очищаем форму
                             create_title.set("".to_string());
                             create_content.set("".to_string());
@@ -470,8 +518,11 @@ fn app() -> Html {
                             // 4XX
                             let status = response.status();
                             let text = response.text().await.unwrap();
-                            feedback_msg.set(Some(FeedbackMessage::Error(format!("Ошибка создания поста: ({}): {}", status, text))));
-                            info!("Ошибка создания поста: {}: {}", status, text);
+                            let action = if is_edit_post_mode { "обновления" } else { "создания" };
+                            let error_msg = format!("Ошибка {}: ({}): {}", action, status, text);
+                            // Общее сообщение
+                            feedback_msg.set(Some(FeedbackMessage::Error(error_msg)));
+                            info!("Ошибка {}: {}: {}", action, status, text);
                         }
                     }
                     Err(error) => {
@@ -483,17 +534,65 @@ fn app() -> Html {
         })
     };
 
-    // Submit-коллбек (Create)
-    let on_create_post_submit = {
-        let create_post_callback = create_post_callback.clone();
+    // Submit-коллбек (Create / Edit)
+    let on_create_edit_post_submit = {
+        let create_edit_post_callback = create_edit_post_callback.clone();
         Callback::from(move |event: web_sys::SubmitEvent| {
             event.prevent_default();
 
-            info!("Отправка формы создания поста");
-            create_post_callback.emit(event);
+            info!("Отправка формы создания/редактирования поста");
+            create_edit_post_callback.emit(event);
         })
     };
 
+
+    // ref форм для фокуса
+    let create_edit_form_ref = use_node_ref();
+    let title_input_ref = use_node_ref();
+
+    let on_edit_post_click = {
+        let create_title = create_title.clone();
+        let create_content = create_content.clone();
+        let editing_post_id = editing_post_id.clone();
+        let feedback_msg = feedback_msg.clone();
+        let title_input_ref = title_input_ref.clone();
+
+        Callback::from(move |post_to_edit: dto::PostPublic| { // Принимаем весь пост
+            // Заполняем форму данными поста
+            create_title.set(post_to_edit.title.clone());
+            create_content.set(post_to_edit.content.clone());
+            // Устанавливаем ID редактируемого поста
+            editing_post_id.set(Some(post_to_edit.id));
+            // Очищаем предыдущие сообщения
+            feedback_msg.set(None);
+            info!("Режим редактирования включен для поста ID: {}", post_to_edit.id);
+
+            // Фокус по OnClick на редактирование поста
+            if let Some(input) = title_input_ref.clone().cast::<HtmlInputElement>() {
+                input.focus().unwrap_or(());
+            }
+
+        })
+    };
+
+    let on_cancel_edit_click = {
+        let editing_post_id = editing_post_id.clone();
+        let create_title = create_title.clone();
+        let create_content = create_content.clone();
+        let feedback_msg = feedback_msg.clone();
+
+        // Здесь MouseEvent для html!
+        Callback::from(move |event: web_sys::MouseEvent| {
+            // Очищаем состояние редактирования
+            editing_post_id.set(None);
+            // Очищаем форму
+            create_title.set("".to_string());
+            create_content.set("".to_string());
+            // Очищаем сообщения
+            feedback_msg.set(None);
+            info!("Режим редактирования отменен.");
+        })
+    };
 
     // Удаление поста
     let delete_post_callback = {
@@ -575,10 +674,10 @@ fn app() -> Html {
                 <h2>{ "Список постов" }</h2>
                 <div class="posts-list">
                     {
-                        posts_list.iter().map(|post| {
+                        posts_list.iter().map(|cur_post| {
                                 // Проверяем по каждому, что пользователь - автор поста
                             let is_author = if let Some(uid_from_state) = *current_user_id {
-                                uid_from_state == post.author_id
+                                uid_from_state == cur_post.author_id
                             } else {
                                 false
                             };
@@ -589,20 +688,33 @@ fn app() -> Html {
                                 // Надо обрамить всё Fragment <></> с одним root-узлом, не добавляя дополнительный элемент в DOM браузера
                                 <> 
                                 <div class="post-card">
-                                    <h3>{ &post.title }</h3>
-                                    <p>{ &post.content }</p>
+                                    <h3>{ &cur_post.title }</h3>
+                                    <p>{ &cur_post.content }</p>
                                     <div class="post-meta">
-                                        <small>{ format!("ID: {}, Автор: {}", post.id, post.author_id) }</small>
+                                        <small>{ format!("ID: {}, Автор: {}", cur_post.id, cur_post.author_id) }</small>
                                     </div>
                                     // (!) Кнопка удаления, по условию - логин + автор
                                     // (переместил в div "post-card", чтобы был ближе к посту, или поправить в CSS)
                                     if *is_authenticated && is_author {
                                         <button 
+                                            class="btn-secondary" // Стиль для кнопки редактирования
+                                                style="font-size: 0.8rem; margin-right: 5px;"
+                                                onclick={Callback::from({
+                                                    let on_edit_post_click = on_edit_post_click.clone();
+                                                    let post_to_edit = cur_post.clone();
+                                                    move |_| {
+                                                        on_edit_post_click.emit(post_to_edit.clone());
+                                                    }
+                                                })}
+                                            >
+                                                {"Редактировать"}
+                                            </button>
+                                        <button 
                                             class="btn-danger"
                                             style="margin-top: 10px; font-size: 0.8rem;"
                                             onclick={Callback::from({
                                                 let delete_post_callback = delete_post_callback.clone();
-                                                let post_id = post.id;
+                                                let post_id = cur_post.id;
                                                 move |_| {
                                                     // Подтверждение удаления
                                                     let confirmed_deletion = web_sys::window()
@@ -633,7 +745,7 @@ fn app() -> Html {
     };
 
     /*** Основная HTML-часть ***/
-    
+
     html! {
         <div class="container">
             <nav>
@@ -777,9 +889,12 @@ fn app() -> Html {
                     // Показываем форму, только если пользователь аутентифицирован
                     if *is_authenticated {
                         <div class="form-card">
-                            <h2>{ "Создать пост" }</h2>
-                            // Коллбек стандартно по OnSubmit
-                            <form onsubmit={on_create_post_submit}>
+                            // Назначение формы в зависимости от режима: Создание / Редактирование
+                            <h2>
+                                { if editing_post_id.is_some() { "Редактирование поста" } else { "Создание поста" } }
+                            </h2>
+                            // Коллбек стандартно по OnSubmit, ref для фокуса на форме
+                            <form ref={create_edit_form_ref} onsubmit={on_create_edit_post_submit}>
                                 <label for="create_title">{"Заголовок*"}</label>
                                 <input
                                     type="text"
@@ -794,6 +909,7 @@ fn app() -> Html {
                                             create_title.set(input.value());
                                         }
                                     })}
+                                ref={title_input_ref}
                                 />
                                 <label for="create_content">{"Содержание*"}</label>
                                 // Используем textarea для многострочного ввода
@@ -813,7 +929,18 @@ fn app() -> Html {
                                         }
                                     })}
                                 />
-                                <button class="btn-primary" type="submit">{"Создать пост"}</button>
+                                <div>
+                                    <button class="btn-primary" type="submit">
+                                        // В зависимости от режима: Создание / РЕдактирование
+                                        { if editing_post_id.is_some() { "Обновить пост" } else { "Создать пост" } }
+                                    </button>
+                                    // (!) Показываем кнопку отмены, если в режиме редактирования
+                                    if editing_post_id.is_some() {
+                                         <button class="btn-secondary" style="margin-left: 10px;" type="button" onclick={on_cancel_edit_click.clone()}>
+                                             {"Отмена"}
+                                         </button>
+                                    }
+                                </div>
                             </form>
                         </div>
                     }
