@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use std::fs;
 
 // Адреса серверов по умолчанию (больше для gRPC, чтоб каждый раз не писать)
-const DEFAULT_HTTP_SERVER_ADDR: &str = "http://localhost:3000";
+const DEFAULT_HTTP_SERVER_ADDR: &str = "http://127.0.0.1:3000";
 const DEFAULT_GRPC_SERVER_ADDR: &str = "http://127.0.0.1:50051";
 
 #[derive(Parser)]
@@ -20,7 +20,7 @@ struct Cli {
     #[arg(long)]
     server: Option<String>,
     
-    /// Использовать gRPC транспорт вместо HTTP
+    /// Использовать gRPC транспорт вместо HTTP (адрес gRPC-сервера по умолчанию: http://127.0.0.1:50051)
     #[arg(long)]
     grpc: bool
 }

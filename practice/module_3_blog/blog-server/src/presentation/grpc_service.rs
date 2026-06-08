@@ -243,7 +243,11 @@ impl BlogServiceServer for BlogGrpcService {
         let user_id = self.verify_auth(&request).await?;
         let update_post_req = request.into_inner();
 
-        let post = self.blog_service.update_post(update_post_req.id, user_id, Some(update_post_req.title), Some(update_post_req.content))
+        // Немного костыльно, чтобы пробросить до доменного update None или Some
+        let new_title = if update_post_req.title.is_empty() {None } else { Some(update_post_req.title) };
+        let new_content = if update_post_req.content.is_empty() { None } else { Some(update_post_req.content) };
+
+        let post = self.blog_service.update_post(update_post_req.id, user_id, new_title, new_content)
             .await
             .map_err(|error| {
                 match error {
