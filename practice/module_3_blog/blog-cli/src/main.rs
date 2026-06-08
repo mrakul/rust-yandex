@@ -2,6 +2,10 @@ use blog_client::{BlogClient, Transport};
 use clap::{Parser, Subcommand};
 use std::fs;
 
+// Адреса серверов по умолчанию (больше для gRPC, чтоб каждый раз не писать)
+const DEFAULT_HTTP_SERVER_ADDR: &str = "http://localhost:3000";
+const DEFAULT_GRPC_SERVER_ADDR: &str = "http://127.0.0.1:50051";
+
 #[derive(Parser)]
 #[command(name = "blog-cli")]
 #[command(about = "CLI-утилита для блога", long_about = None)]
@@ -9,9 +13,12 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
     
-    /// Адрес сервера (по умолчанию: http://localhost:3000, где должен быть HTTP)
-    #[arg(long, default_value = "http://localhost:3000")]
-    server: String,
+    /// Адрес сервера (по умолчанию: http://127.0.0.1:3000, где должен быть HTTP)
+    // #[arg(long, default_value = "http://127.0.0.1:3000")]
+
+    // Убрал умолчание, дефолтные значения берутся в зависимости от типа транспорта
+    #[arg(long)]
+    server: Option<String>,
     
     /// Использовать gRPC транспорт вместо HTTP
     #[arg(long)]
@@ -76,7 +83,7 @@ enum Commands {
     
     /// Список постов с limit и ofsset
     List {
-        /// Количество постов на странице (дефолтное: 10)
+        /// Количество постов на странице (дефолтное: 10 в коде)
         #[arg(long)]
         limit: Option<i64>,
         
@@ -91,11 +98,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Пока, вроде, не нужно
     // dotenvy::dotenv().ok();
     
+    // Парсим командную строку
     let cli = Cli::parse();
-    let transport = if cli.grpc {
-        Transport::Grpc(cli.server)
+
+    // Адрес в зависимости от указания в команде server'а
+    let server_addr = match cli.server {
+        Some(cli_addr) => {
+            println!("Адрес сервера из команды: {}", cli_addr);
+            cli_addr
+        },
+        None => {
+            if !cli.grpc {
+                DEFAULT_HTTP_SERVER_ADDR.to_string()
+            } else {
+                DEFAULT_GRPC_SERVER_ADDR.to_string()
+            }
+        }
+    };
+
+    // Только тип транспорта, адрес определён
+    let transport = if !cli.grpc {
+        Transport::Http(server_addr)
     } else {
-        Transport::Http(cli.server)
+        Transport::Grpc(server_addr)
     };
     
     // Переделал под асинхронный вариант с await из-за gRPC'шного connect
@@ -259,32 +284,40 @@ fn save_token(token: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/*** Команды для проверки: HTTP и gRPC попарно ***/
+
 // Регистрация
-// cargo run -p blog-cli -- register --username "bob" --email "bob@example.com" --password "secret123"
+// cargo run -p blog-cli -- register --username "misha" --email "misha@misha.com" --password "12345678"
+// cargo run -p blog-cli -- --grpc register --username "misha2" --email "misha2@misha.com" --password "12345678"
 
 // Логин
-// cargo run -p blog-cli -- login --username "bob" --password "secret123"
+// cargo run -p blog-cli -- login --username "misha" --password "12345678"
+// cargo run -p blog-cli -- --grpc login --username "misha2" --password "12345678"
 
 // Создать пост
 // cargo run -p blog-cli -- create --title "Мой первый пост" --content "Содержание"
-
-// Пост через gRPC
-// cargo run -p blog-cli -- create --title "Мой первый пост" --content "Содержание" --grpc
+// cargo run -p blog-cli -- --grpc create --title "Мой второй пост" --content "Содержание"
 
 // Получить пост
 // cargo run -p blog-cli -- get --id 1
+// cargo run -p blog-cli -- --grpc get --id 2
 
 // Обновить пост, только заголовок 
-// cargo run -p blog-cli -- update --id 1 --title "Обновлённый заголовок"
+// cargo run -p blog-cli -- update --id 1 --title "Обновлённый заголовок HTTP"
+// cargo run -p blog-cli -- --grpc update --id 1 --title "Обновлённый заголовок gRPC"
+
+// Обновить пост, только содержимое 
+// cargo run -p blog-cli -- update --id 1 --content "Обновлённое содержание HTTP"
+// cargo run -p blog-cli -- --grpc update --id 1 --content "Обновлённое содержание gRPC"
 
 // Удалить пост
 // cargo run -p blog-cli -- delete --id 1
+// cargo run -p blog-cli -- --grpc delete --id 1
 
 // Список с limit и offset
-// cargo run -p blog-cli -- list --limit 20 --offset 0
+// cargo run -p blog-cli -- list --limit 2 --offset 1
+// cargo run -p blog-cli -- --grpc list --limit 2 --offset 1
 
 // Дефлотные значения
 // cargo run -p blog-cli -- list
-
-// Обновить только контент
-// cargo run -p blog-cli -- update --id 1 --content "Обновлённый контент"
+// cargo run -p blog-cli -- --grpc list
