@@ -16,5 +16,8 @@
 #### practice/module_2/quotes-streaming/
 > Стриминг котировок
 
+#### practice/module_3_blog/
+> Блог: blog-server (backend HTTP / gRPC), blog-client (библиотека), blog-cli (проверка сервера с использованием blog-client), blog-wasm (фронтенд)
+
 ### theory/
 > Задания во время изучения модуля
