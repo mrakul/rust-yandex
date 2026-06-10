@@ -1,9 +1,9 @@
 use reqwest::{Client, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 use std::time::Duration;
 // use std::collections::HashMap;
 
-use crate::{BlogClientError, AuthResponse, Post, User, ListPostsResponse};
+use crate::{BlogClientError, AuthResponse, Post, ListPostsResponse};
 
 #[derive(Debug, Clone)]
 pub struct HttpClient {

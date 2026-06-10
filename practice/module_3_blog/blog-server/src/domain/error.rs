@@ -6,19 +6,19 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum DomainError {
     // Здесь пока есть неиспользуемые
-    #[error("validation failed: {0}")]
-    Validation(String),
+    // #[error("validation failed: {0}")]
+    // Validation(String),
     #[error("user already exists: {0}")]
     UserAlreadyExists(String),
-    #[error("user not found: {0}")]
-    UserNotFound(String),
-    #[error("invalid credentials")]
-    InvalidCredentials,
+    // #[error("user not found: {0}")]
+    // UserNotFound(String),
+    // #[error("invalid credentials")]
+    // InvalidCredentials,
     #[error("post not found: {0}")]
     PostNotFound(i64),
     
-    #[error("forbidden: user is not the author of the post")]
-    Forbidden,
+    // #[error("forbidden: user is not the author of the post")]
+    // Forbidden,
     #[error("internal error: {0}")]
     Internal(String),
 }
@@ -79,12 +79,12 @@ impl ResponseError for BlogError {
 impl From<DomainError> for BlogError {
     fn from(err: DomainError) -> Self {
         match err {
-            DomainError::Validation(msg) => BlogError::Validation(msg),
+            // DomainError::Validation(msg) => BlogError::Validation(msg),
             DomainError::UserAlreadyExists(_) => BlogError::Conflict("user already exists".into()),
-            DomainError::UserNotFound(_) => BlogError::NotFound("user not found".into()),
-            DomainError::InvalidCredentials => BlogError::Unauthorized,
+            // DomainError::UserNotFound(_) => BlogError::NotFound("user not found".into()),
+            // DomainError::InvalidCredentials => BlogError::Unauthorized,
             DomainError::PostNotFound(id) => BlogError::NotFound(format!("post {}", id)),
-            DomainError::Forbidden => BlogError::Forbidden,
+            // DomainError::Forbidden => BlogError::Forbidden,
             DomainError::Internal(msg) => BlogError::Internal(msg),
         }
     }

@@ -87,6 +87,7 @@ impl BlogServiceServer for BlogGrpcService {
             .await
             .map_err(|error| {
                 match error {
+                    // TODO: действительно, тут бы сделать mapping BlogError => Status и везде ниже
                     // Conflict 409 и Validation
                     crate::domain::BlogError::Conflict(_) => Status::already_exists("Пользователь уже существует"),
                     crate::domain::BlogError::Validation(msg) => Status::invalid_argument(msg),

@@ -1,6 +1,6 @@
-use actix_web::{get, post, put, delete, web, HttpRequest, HttpResponse, Scope};
+use actix_web::{get, post, put, delete, web, HttpRequest, HttpResponse};
 // use actix_web::HttpMessage;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use tracing::info;
 
 use crate::application::{AuthService, BlogService};

@@ -9,7 +9,8 @@ use crate::infrastructure::jwt::JwtService;
 #[derive(Debug, Clone)]
 pub struct AuthenticatedUser {
     pub user_id: i64,
-    pub username: String
+    // Тут оперирую только user_id, закомментил для искоренения Warning'а
+    // pub username: String
 }
 
 pub async fn jwt_validator(req: ServiceRequest,
@@ -41,7 +42,7 @@ pub async fn jwt_validator(req: ServiceRequest,
 
     let user = AuthenticatedUser {
         user_id,
-        username: claims.username,
+        // username: claims.username,
     };
 
     req.extensions_mut().insert(user);

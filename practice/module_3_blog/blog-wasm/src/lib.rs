@@ -103,7 +103,7 @@ fn app() -> Html {
         let current_user_id = current_user_id.clone();
         
         // Callback::from преобразует замыкание в обработчик событий Yew
-        Callback::from(move |event: web_sys::SubmitEvent| {
+        Callback::from(move |_event: web_sys::SubmitEvent| {
             let reg_username = reg_username.clone();
             let reg_email = reg_email.clone();
             let reg_password = reg_password.clone();
@@ -332,7 +332,7 @@ fn app() -> Html {
         let feedback_msg = feedback_msg.clone();
 
         // (!) Тут нужен MouseEvent, чтобы в html! передать по onclick
-        Callback::from(move |event: web_sys::MouseEvent| {
+        Callback::from(move |_event: web_sys::MouseEvent| {
             // Удаляем токен и имя пользователя из LocalStorage
             LocalStorage::delete(BLOG_TOKEN_KEY);
             LocalStorage::delete(BLOG_USERNAME_KEY);
@@ -582,7 +582,7 @@ fn app() -> Html {
         let feedback_msg = feedback_msg.clone();
 
         // Здесь MouseEvent для html!
-        Callback::from(move |event: web_sys::MouseEvent| {
+        Callback::from(move |_event: web_sys::MouseEvent| {
             // Очищаем состояние редактирования
             editing_post_id.set(None);
             // Очищаем форму
