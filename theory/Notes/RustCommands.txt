@@ -49,6 +49,8 @@ cargo clippy --fix --bin "yandex_course" -p yandex_course --allow-dirty
 # Добавить/удалить внешнюю зависимость - запускать прям в проекте
 cargo add time
 cargo remove time
+# Добавить в [build-dependencies]
+cargo add [зависимость]--build
 
 # Поиск крейтов (crates) - внешних зависимостей
 cargo search tokio
