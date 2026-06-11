@@ -3,9 +3,11 @@
 
 resolver = "2"
 members = [
+    # "theory/module_4_ffi_unsafe/topic_1_linking/dyn_lib_linking"
     # "theory/module_3/topic_3/lesson_6_db"
     # "practice/module_1/parser",
     # "practice/module_2/quotes-streaming",
+    # , "theory/module_4_ffi_unsafe/topic_1_linking/lesson_1_linking/hello-dyn"
     ]
 
 # Пока помечаю проекты независимыми (в VSCode тогда открывать отдельно директории, а то rust-analyzer не сдюжит)
