@@ -111,3 +111,5 @@ Restart rust-analyzer: This is often the simplest fix.
 In VS Code, open the Command Palette (Ctrl+Shift+P or Cmd+Shift+P) 
 and run the command "Rust Analyzer: Restart Server".
 
+# Установка bindgen
+cargo install bindgen-cli 
