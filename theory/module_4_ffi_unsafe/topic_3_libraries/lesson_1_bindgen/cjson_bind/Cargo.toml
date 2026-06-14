@@ -1,0 +1,16 @@
+[package]
+name = "bindgen_buildrs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[build-dependencies]
+
+# Для "объявлений" C-шного кода в Rust
+# > cargo add bindgen --build
+bindgen = "0.72.1"
+
+# Для компиляции и сборки в библиотеку C-шного кода
+# > cargo add cc --build
+cc = "1.2.64"

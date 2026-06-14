@@ -1,0 +1,18 @@
+[package]
+name = "rust_to_other_lang"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+# Динамическая библиотека
+# Ошибка в теории?
+# crate-type = ["dylib"] # dylib(?) — динамическая библиотека с C ABI для других языков 
+# crate-type = ["cdylib"] # cdylib(?) — динамическая библиотека с C ABI для других языков 
+
+# Статическая библиотека
+
+crate-type = ["staticlib"]
+# или можно сделать такой вариант, тогда соберётся два файла с разными расширениями
+# crate-type = ["dylib", "staticlib"] 
+
+[dependencies]
