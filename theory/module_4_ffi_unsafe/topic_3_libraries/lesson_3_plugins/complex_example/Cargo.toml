@@ -1,0 +1,5 @@
+[workspace]
+resolver = "2"
+members = ["plugin_interface", "exchange", "bot1", "plugin_intarface"] 
+
+[dependencies]

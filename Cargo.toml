@@ -2,7 +2,7 @@
 [workspace]
 
 resolver = "2"
-members = [
+members = ["theory/module_4_ffi_unsafe/topic_3_libraries/lesson_3_plugins/complex_example","theory/module_4_ffi_unsafe/topic_3_libraries/lesson_3_plugins/simple_example"
     # "theory/module_4_ffi_unsafe/topic_2_libraries/lesson_1_bindgen/cjson_bind"
     # "theory/module_4_ffi_unsafe/topic_2_libraries/lesson_1_bindgen/bindgen_example"
     # "theory/module_4_ffi_unsafe/topic_1_linking/dyn_lib_linking"
