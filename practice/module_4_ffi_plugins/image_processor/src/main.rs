@@ -1,10 +1,16 @@
 mod error;
+mod plugin_loader;
+
 use error::ProcessingError;
 use clap::Parser;
 use std::path::PathBuf;
 use image::{ImageBuffer, RgbaImage};
 
+// Для чтения параметров
+use std::fs;
+
 // cargo run -p image_processor
+// cargo run -p image_processor -- --input ./aux/random_png_1033x775.png --output ./aux/test_output.png --plugin mirror --params ./aux/dummy_params.txt
 // cargo run -p image_processor -- --input ./aux/random_png_1033x775.png --output ./aux/test_output.png --plugin mirror --params ./aux/dummy_params.txt
 
 #[derive(Parser, Debug)]
@@ -33,9 +39,10 @@ struct Args {
 
 // Обработка плагином
 fn process_image_with_plugin( input_path: &PathBuf, output_path: &PathBuf,
-                            // TODO:
-                            _plugin_name: &str, _plugin_path: &PathBuf,
-                            _params_path: &PathBuf) -> Result<(), ProcessingError> {
+                            plugin_name: &str,
+                            base_plugin_path: &PathBuf,
+                            params_path: &PathBuf) -> Result<(), ProcessingError>
+{
     
     println!("Загрузка изображения: {}", input_path.display());
 
@@ -52,10 +59,33 @@ fn process_image_with_plugin( input_path: &PathBuf, output_path: &PathBuf,
     println!("Размер изображения: {}x{}", width, height);
 
     // Перевод в сырой вектор: Vec<u8>, размер должен быть width * height * 4
-    let rgba_buffer: Vec<u8> = rgba_image.into_raw();
+    let mut rgba_buffer: Vec<u8> = rgba_image.into_raw();
     println!("Размер буфера: {} байт", rgba_buffer.len());
 
-    // TODO: обработка плагином
+    /*** Загрузка плагина, ... */
+
+    let lib_linux_filename = format!("lib{}.so", plugin_name);
+    let full_plugin_path = base_plugin_path.join(&lib_linux_filename);
+    println!("Загрузка плагина: {}", full_plugin_path.display());
+
+    if !full_plugin_path.exists() {
+            return Err(ProcessingError::PluginError(format!("Файл плагина не найден: {}", full_plugin_path.display()
+        )));
+    }
+
+    // Читаем параметры
+    let params_content = fs::read_to_string(params_path)
+        .map_err(|error| ProcessingError::PluginError(format!("Не удалось прочитать файл параметров '{}': {}", params_path.display(), error)))?;
+
+    // Загружаем запрошенный плагин, передаём ссылки mut и не mut для изображения, unsafe вызов по найденному символу 
+    plugin_loader::load_and_run_plugin(&full_plugin_path,
+                                       width,
+                                       height,
+                            &mut rgba_buffer, 
+                           &params_content)
+        .map_err(|error| ProcessingError::PluginError(format!("Ошибка при вызове плагина: {}", error)))?;
+
+    println!("Плагин успешно применился");
 
     // Перевод обратно в RgbaImage (ImageBuffer::from_vec(...) возвращает RgbaImage)
     // Выдаст ошибку: 
