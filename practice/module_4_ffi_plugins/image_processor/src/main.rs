@@ -10,8 +10,7 @@ use image::{ImageBuffer, RgbaImage};
 use std::fs;
 
 // cargo run -p image_processor
-// cargo run -p image_processor -- --input ./aux/random_png_1033x775.png --output ./aux/test_output.png --plugin mirror --params ./aux/dummy_params.txt
-// cargo run -p image_processor -- --input ./aux/random_png_1033x775.png --output ./aux/test_output.png --plugin mirror --params ./aux/dummy_params.txt
+// cargo run -p image_processor -- --input ./aux/random_png_1033x775.png --output ./aux/processed_image.png --plugin mirror --params ./aux/params.txt
 
 #[derive(Parser, Debug)]
 #[command(name = "image_processor", about = "CLI для проверки применения плагинов к изображению")]
@@ -64,7 +63,7 @@ fn process_image_with_plugin( input_path: &PathBuf, output_path: &PathBuf,
 
     /*** Загрузка плагина, ... */
 
-    let lib_linux_filename = format!("lib{}.so", plugin_name);
+    let lib_linux_filename = format!("lib{}_plugin.so", plugin_name);
     let full_plugin_path = base_plugin_path.join(&lib_linux_filename);
     println!("Загрузка плагина: {}", full_plugin_path.display());
 
@@ -88,12 +87,12 @@ fn process_image_with_plugin( input_path: &PathBuf, output_path: &PathBuf,
     println!("Плагин успешно применился");
 
     // Перевод обратно в RgbaImage (ImageBuffer::from_vec(...) возвращает RgbaImage)
-    // Выдаст ошибку: 
-    // let processed_image: RgbaImage = ImageBuffer::from_vec(10000, 10000, rgba_buffer)
     let processed_image: RgbaImage = ImageBuffer::from_vec(width, height, rgba_buffer)
         .ok_or_else(|| {image::ImageError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidData,
                             "Размеры не соответствуют размеру буфера"))
-    }).map_err(ProcessingError::ProcessImage)?;
+                            })
+    // Выдаст ошибку по None, например: let processed_image: RgbaImage = ImageBuffer::from_vec(10000, 10000, rgba_buffer)
+                            .map_err(ProcessingError::ProcessImage)?;
 
 
     // Сохраняем обработанную картинку
