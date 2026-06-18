@@ -14,6 +14,7 @@ struct MirrorParams {
     vertical: bool
 }
 
+const RGBA_BYTES_PER_PIXEL: u32 = 4;
 
 // Парсинг параметров в формате: "horizontal=true,vertical=false"
 fn parse_mirror_params(params_str: &str) -> Result<MirrorParams, String> 
@@ -70,14 +71,17 @@ fn apply_mirror_logic(rgba_data: &mut [u8], width: u32, height: u32, params: Mir
         for row in 0..height {
             // До середины по горизонтали (вертикальной линии посередине :) )
             for column in 0..(width / 2) {
-                let pixel_left = (row * width + column) * 4;
+                let pixel_left = (row * width + column) * RGBA_BYTES_PER_PIXEL;
                 // Симметричный относительно вертикальной середины
-                let pixel_right = (row * width + (width - 1 - column)) * 4;
+                let pixel_right = (row * width + (width - 1 - column)) * RGBA_BYTES_PER_PIXEL;
 
                 // Копируем RGBA пикселя побайтно
                 for byte_offset in 0..4 {
                     // Хочет usize в параметрах
                     rgba_data.swap((pixel_left + byte_offset) as usize, (pixel_right + byte_offset) as usize);
+                
+                    // Возможно, здесь можно что-то покрасивше придумать что-то вроде packed-структурой RGBA {u8, u8, u8, u8}. 
+                    // Но, насколько хватает понимания, для стабильного ABI получится перевод в C ABI с вытекающей обработкой в unsafe
                 }
             }
         }
@@ -90,9 +94,9 @@ fn apply_mirror_logic(rgba_data: &mut [u8], width: u32, height: u32, params: Mir
             // По всем столбцам
             for column in 0..width {
                 // Верхний
-                let pixel_up = (row * width + column) * 4;
+                let pixel_up = (row * width + column) * RGBA_BYTES_PER_PIXEL as u32;
                 // Симметричный относительно горизонтальной середины
-                let pixel_down = ((height - 1 - row) * width + column) * 4;
+                let pixel_down = ((height - 1 - row) * width + column) * RGBA_BYTES_PER_PIXEL as u32;
                 // Аналогично
                 for byte_offset in 0..4 {
                     rgba_data.swap((pixel_up + byte_offset) as usize, (pixel_down + byte_offset) as usize);
@@ -129,7 +133,7 @@ pub extern "C" fn process_image(width: u32,
             let params_to_use = parse_mirror_params(params_str)?;
 
             // (!) unsafe-получение слайса &mut [u8] из *mut u8 такого же размера
-            let data_slice = std::slice::from_raw_parts_mut(rgba_data, (width * height * 4) as usize);
+            let data_slice = std::slice::from_raw_parts_mut(rgba_data, (width * height * RGBA_BYTES_PER_PIXEL) as usize);
 
             // Отражение по запрошенным параметрам
             apply_mirror_logic(data_slice, width, height, params_to_use);
@@ -157,9 +161,8 @@ mod tests {
     fn test_parse_params_all_true() {
         let params_str = "horizontal=true,vertical=true";
         let expected_params = MirrorParams { horizontal: true, vertical: true };
-        // Здесь и дальше:
-        // Задание:"Обработка ошибок: все возможные ошибки обрабатываются, нет паник (unwrap() только в обоснованных местах)."
-        // От себя: очень много попрактиковался с юнит-тестами в практическом задании #1
+        // Здесь и дальше могу применить следующее допущение из задания:
+        // Задание:"Обработка ошибок: все возможные ошибки обрабатываются, нет паник (unwrap() только в обоснованных местах).")
         assert_eq!(parse_mirror_params(params_str).unwrap(), expected_params);
     }
 
@@ -167,4 +170,124 @@ mod tests {
     //  - 2x2 три тесты, константный буфер RGBA (посмотреть, как для тестов делал константу в работе #1)
     //  - остальные по парсингу параметров
     //  - Константа 4 байта и другие
+
+    #[test]
+    fn test_parse_params_all_false() {
+        let params_str = "horizontal=false,vertical=false";
+        let expected_params = MirrorParams { horizontal: false, vertical: false };
+
+        assert_eq!(parse_mirror_params(params_str).unwrap(), expected_params);
+    }
+
+    #[test]
+    fn test_parse_params_horizontal_only() {
+        let params_str = "horizontal=true";
+        let expected_params = MirrorParams { horizontal: true, vertical: false };
+        assert_eq!(parse_mirror_params(params_str).unwrap(), expected_params);
+    }
+
+    #[test]
+    fn test_parse_params_vertical_only() {
+        let params_str = "vertical=true";
+        let expected_params = MirrorParams { horizontal: false, vertical: true };
+        assert_eq!(parse_mirror_params(params_str).unwrap(), expected_params);
+    }
+
+    #[test]
+    fn test_parse_params_defaults_missing_keys() {
+        let params_str = "";
+        let expected_params = MirrorParams { horizontal: false, vertical: false };
+        assert_eq!(parse_mirror_params(params_str).unwrap(), expected_params);
+    }
+
+    #[test]
+    fn test_parse_params_unknown_key() {
+        let params_str = "horizontal=true,unknown_key=some_value,vertical=false";
+        let _expected = MirrorParams { horizontal: true, vertical: false };
+
+        // Проверили на ошибку
+        assert_eq!(parse_mirror_params(params_str).is_err(), true);
+        // Можно unwrap() на err, будет без паники
+        assert_eq!(parse_mirror_params(params_str).unwrap_err(), "Неподдерживаемый параметр 'unknown_key'".to_string());
+
+    }
+
+    #[test]
+    fn test_parse_params_invalid_value() {
+        let params_str = "horizontal=wrong_value";
+        // TODO: везде можно проверить сообщение
+        assert!(parse_mirror_params(params_str).is_err());
+    }
+
+    #[test]
+    fn test_parse_params_invalid_format() {
+        let params_str = "horizontal:true";
+        assert!(parse_mirror_params(params_str).is_err());
+    }
+
+    /*** Тесты с буфером 2x2 ***/
+
+    const WIDTH: usize = 2;
+    const HEIGHT: usize = 2;
+    // Опорный для тестов 2x2
+    const RGBA_2X2: [u8; WIDTH * HEIGHT * RGBA_BYTES_PER_PIXEL as usize] = [255,   0,   0, 255,  // Красный
+                                                                            0,   255,   0, 255,  // Зелёный
+                                                                            0,     0, 255, 255,  // Голубой
+                                                                            255, 255,   0, 255]; // Жёлтый
+    #[test]
+    fn test_apply_mirror_logic_horizontal() {
+        // Клонируем опорный:       [Red   Green]
+        //                          [Blue Yellow]
+        let mut rgba_data: Vec<u8> = RGBA_2X2.to_vec();
+        // Горизонтальное отражение
+        let params = MirrorParams { horizontal: true, vertical: false };
+
+        // [Green Red]
+        // [Yellow Blue]
+        let expected_result = vec![0, 255, 0, 255,   
+                                            255, 0, 0, 255,  
+                                            255, 255, 0, 255, 
+                                            0, 0, 255, 255];
+
+        apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
+
+        assert_eq!(rgba_data, expected_result);
+    }
+
+    #[test]
+    fn test_apply_mirror_logic_vertical() {
+        // Клонируем опорный:       [Red   Green]
+        //                          [Blue Yellow]
+        let mut rgba_data: Vec<u8> = RGBA_2X2.to_vec();
+        // Только вертикальное отражение
+        let params = MirrorParams { horizontal: false, vertical: true };
+
+
+        let expected_result = vec![0, 0, 255, 255,
+                                          255, 255, 0, 255,
+                                          255, 0, 0, 255,
+                                            0, 255, 0, 255];
+
+        apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
+
+        assert_eq!(rgba_data, expected_result);
+    }
+
+    #[test]
+    fn test_apply_mirror_logic_both() {
+        // Клонируем опорный:       [Red   Green]
+        //                          [Blue Yellow]
+        let mut rgba_data: Vec<u8> = RGBA_2X2.to_vec();
+        let params = MirrorParams { horizontal: true, vertical: true };
+        // [Yellow Blue]
+        // [Green Red]
+        let expected_result = vec![255, 255, 0, 255,
+                                            0, 0, 255, 255,
+                                            0, 255, 0, 255,
+                                            255, 0, 0, 255];
+
+        apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
+
+        assert_eq!(rgba_data, expected_result);
+    }
 }
