@@ -256,10 +256,8 @@ mod tests {
 
         // [Green Red]
         // [Yellow Blue]
-        let expected_result = vec![0, 255, 0, 255,   
-                                            255, 0, 0, 255,  
-                                            255, 255, 0, 255, 
-                                            0, 0, 255, 255];
+        let expected_result = vec![0, 255, 0, 255, 255, 0, 0, 255,  
+                                            255, 255, 0, 255, 0, 0, 255, 255];
 
         apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
 
@@ -275,10 +273,8 @@ mod tests {
         let params = MirrorParams { horizontal: false, vertical: true };
 
 
-        let expected_result = vec![0, 0, 255, 255,
-                                          255, 255, 0, 255,
-                                          255, 0, 0, 255,
-                                            0, 255, 0, 255];
+        let expected_result = vec![0, 0, 255, 255, 255, 255, 0, 255,
+                                            255, 0, 0, 255, 0, 255, 0, 255];
 
         apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
 
@@ -293,10 +289,8 @@ mod tests {
         let params = MirrorParams { horizontal: true, vertical: true };
         // [Yellow Blue]
         // [Green Red]
-        let expected_result = vec![255, 255, 0, 255,
-                                            0, 0, 255, 255,
-                                            0, 255, 0, 255,
-                                            255, 0, 0, 255];
+        let expected_result = vec![255, 255, 0, 255,    0, 0, 255, 255,
+                                            0, 255, 0, 255,    255, 0, 0, 255];
 
         apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
 
