@@ -84,8 +84,6 @@ fn process_image_with_plugin( input_path: &PathBuf, output_path: &PathBuf,
                            &params_content)
         .map_err(|error| ProcessingError::PluginError(format!("Ошибка при вызове плагина: {}", error)))?;
 
-    println!("Плагин успешно применился");
-
     // Перевод обратно в RgbaImage (ImageBuffer::from_vec(...) возвращает RgbaImage)
     let processed_image: RgbaImage = ImageBuffer::from_vec(width, height, rgba_buffer)
         .ok_or_else(|| {image::ImageError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidData,
@@ -129,7 +127,7 @@ fn main() {
     // Обработка запрошенным плагином
     match process_image_with_plugin(&args.input, &args.output, &args.plugin, &args.plugin_path, &args.params) {
         Ok(()) => {
-            println!("Изображение успешно обработано плагином: {}", args.plugin);
+            println!("Обработка завершена плагином: {}", args.plugin);
         }
         Err(error) => {
             eprintln!("Ошибка обработки: {}", error);

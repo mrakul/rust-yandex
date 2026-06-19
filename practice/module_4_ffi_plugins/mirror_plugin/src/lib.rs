@@ -144,8 +144,20 @@ pub extern "C" fn process_image(width: u32,
 
     // Если паника, ловится catch_unwind, логируем
     // Буфер меняю in-place, понимаю, можно предусмотреть откат буфера при ошибке
-    if result.is_err() {
-        eprintln!("Плагин mirror запаниковал!");
+    // if result.is_err() {
+    //     eprintln!("Плагин mirror запаниковал!");
+    // }
+
+    // Тут чуть сложнее получилось: Result<Result<(), String> ...Box dyn >>
+    match result {
+        Ok(Ok(())) => {},
+        Ok(Err(parse_error)) => {
+            eprintln!("Ошибка плагина Mirror (парсинг, вероятно): {}.\nОбработанное изображение == исходному", parse_error);
+        },
+        Err(_) => {
+            eprintln!("Плагин mirror запаниковал!");
+            // Тут можно сделать восстановление исходной, понимаю
+        }
     }
 
 
