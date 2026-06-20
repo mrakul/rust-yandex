@@ -115,10 +115,13 @@ pub extern "C" fn process_image(width: u32,
                                 params: *const c_char)   // const char *params
 {
     // Ловим панику, чтобы не было UB через FFI границу
-    // Нужно указать тип как в apply_mirror_logic для catch_unwind (сделал String)
+    // Нужно указать тип как в parse_mirror_params для catch_unwind (сделал String)
     let result = catch_unwind(|| -> Result<(), String> {
 
-        // unsafe-секция для работы с сырыми указателями на params и rgba-буфер
+        // SAFETY: вызывающий гарантирует, что rgba_data - валидный указатель на область указанного размера (width * height * 4).
+        // И что params - сишная строка с NULL-терминирующим символом.
+        
+        // unsafe-секция для работы с сырыми указателями на params и rgba-буфер     
         unsafe {
             // CStr из const char *params params
             let params_cstr = CStr::from_ptr(params);

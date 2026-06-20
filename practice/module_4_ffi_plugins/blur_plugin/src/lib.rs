@@ -9,6 +9,10 @@ struct BlurParams {
 }
 
 const RGBA_BYTES_PER_PIXEL: u32 = 4;
+const R_OFFSET: usize = 0;
+const G_OFFSET: usize = 1;
+const B_OFFSET: usize = 2;
+const A_OFFSET: usize = 3;
 
 // Парсинг параметров в формате: "radius=1,iterations=3"
 fn parse_blur_params(params_str: &str) -> Result<BlurParams, String> 
@@ -58,7 +62,58 @@ fn parse_blur_params(params_str: &str) -> Result<BlurParams, String>
 // Применить blur к rgba-буферу [u8]
 fn apply_blur_logic(rgba_data: &mut [u8], width: u32, height: u32, params: BlurParams)
 {
-    todo!()
+    // Меняем в rgba_data, итерации в промежуточный буфер, чтобы иметь неизменённые значения на каждой итерации
+    let mut picture_iter_snapshot = rgba_data.to_vec();
+
+    // N-итераций по каждому пикселю 
+    for _ in 0..params.iterations {
+        for row in 0..height {
+            for column in 0..width {
+                // Текущий пиксель
+                let cur_pixel_pos = (row * width + column) * RGBA_BYTES_PER_PIXEL;
+
+                // Аккумуляторы побайтно и счётчик области вокруг
+                let mut area_accum_r: u32 = 0;
+                let mut area_accum_g: u32 = 0;
+                let mut area_accum_b: u32 = 0;
+                let mut area_accum_a: u32 = 0;
+                let mut area_pixel_cnt: u32 = 0;
+
+                // Границы текущего пикселя
+                let y_min = row.saturating_sub(params.radius);
+                let y_max = std::cmp::min(row + params.radius, height - 1);
+                let x_min = column.saturating_sub(params.radius);
+                let x_max = std::cmp::min(column + params.radius, width - 1);
+
+                // Просматриваем область, аккумулируем по цветам, сам пиксель включается
+                for area_y in y_min..= y_max {
+                    for area_x in x_min..= x_max {
+                        let area_pixel = (area_y * width + area_x) * RGBA_BYTES_PER_PIXEL;
+                        area_accum_r += picture_iter_snapshot[area_pixel as usize] as u32;
+                        area_accum_g += picture_iter_snapshot[area_pixel as usize + G_OFFSET] as u32;
+                        area_accum_b += picture_iter_snapshot[area_pixel as usize + B_OFFSET] as u32;
+                        area_accum_a += picture_iter_snapshot[area_pixel as usize + A_OFFSET] as u32;
+                        area_pixel_cnt += 1;
+                    }
+                }
+
+                // Средние значения с округлением
+                let avg_r = ((area_accum_r as f64) / (area_pixel_cnt as f64)).round() as u8;
+                let avg_g = ((area_accum_g as f64) / (area_pixel_cnt as f64)).round() as u8;
+                let avg_b = ((area_accum_b as f64) / (area_pixel_cnt as f64)).round() as u8;
+                let avg_a = ((area_accum_a as f64) / (area_pixel_cnt as f64)).round() as u8;
+
+                // Меняем исходный пиксель 
+                rgba_data[cur_pixel_pos as usize] = avg_r;
+                rgba_data[cur_pixel_pos as usize + G_OFFSET] = avg_g;
+                rgba_data[cur_pixel_pos as usize + B_OFFSET] = avg_b;
+                rgba_data[cur_pixel_pos as usize + A_OFFSET] = avg_a;
+            }
+        }
+
+        // memcpy в послеитерационный буфер всего буфера
+        picture_iter_snapshot.copy_from_slice(rgba_data);
+    }
 }
 
 
@@ -70,8 +125,11 @@ pub extern "C" fn process_image(width: u32,
                                 params: *const c_char)   // const char *params
 {
     // Ловим панику, чтобы не было UB через FFI границу
-    // Нужно указать тип как в apply_mirror_logic для catch_unwind (сделал String)
+    // Нужно указать тип как в parse_blur_params для catch_unwind (сделал String)
     let result = catch_unwind(|| -> Result<(), String> {
+        
+        // SAFETY: вызывающий гарантирует, что rgba_data - валидный указатель на область указанного размера (width * height * 4).
+        // И что params - сишная строка с NULL-терминирующим символом.
 
         // unsafe-секция для работы с сырыми указателями на params и rgba-буфер
         unsafe {
@@ -104,7 +162,7 @@ pub extern "C" fn process_image(width: u32,
             eprintln!("Ошибка плагина Blur (парсинг, вероятно): {}.\nОбработанное изображение == исходному", parse_error);
         },
         Err(_) => {
-            eprintln!("Плагин mirror запаниковал!");
+            eprintln!("Плагин Blur запаниковал!");
             // Тут можно сделать восстановление исходной, понимаю
         }
     }
@@ -176,67 +234,47 @@ mod tests {
 
     const WIDTH: usize = 3;
     const HEIGHT: usize = 3;
-    // Опорный для тестов 2x2
-    const RGBA_3X3: [u8; WIDTH * HEIGHT * RGBA_BYTES_PER_PIXEL as usize] = 
-    [0, 0 ,0 ,0, 0, 0 ,0 ,0, 0, 0 ,0 ,0,
-     0, 0 ,0 ,0, 0, 0 ,0 ,0, 0, 0 ,0 ,0,
-     0, 0 ,0 ,0, 0, 0 ,0 ,0, 0, 0 ,0 ,0];  
+    const RGBA_3X3_UNIFORM: [u8; WIDTH * HEIGHT * RGBA_BYTES_PER_PIXEL as usize] = 
+        [120, 120, 120, 120,   120, 120, 120, 120,   120, 120, 120, 120,
+         120, 120, 120, 120,   120, 120, 120, 120,   120, 120, 120, 120,
+         120, 120, 120, 120,   120, 120, 120, 120,   120, 120, 120, 120];
 
+    const RGBA_3X3_BRIGHT_CENTER: [u8; WIDTH * HEIGHT * RGBA_BYTES_PER_PIXEL as usize] = 
+        [0, 0, 0, 255,   0, 0, 0, 255,           0, 0, 0, 255,
+         0, 0, 0, 255,   255, 255, 255, 255,     0, 0, 0, 255,
+         0, 0, 0, 255,   0, 0, 0, 255,           0, 0, 0, 255];
     
-    // #[test]
-    // fn test_apply_mirror_logic_horizontal() {
-    //     // Клонируем опорный:       [Red   Green]
-    //     //                          [Blue Yellow]
-    //     let mut rgba_data: Vec<u8> = RGBA_2X2.to_vec();
-    //     // Горизонтальное отражение
-    //     let params = BlurParams { radius: true, iterations: false };
+    #[test]
+    fn test_apply_blur_logic_uniform_no_change() {
+        let mut rgba_data: Vec<u8> = RGBA_3X3_UNIFORM.to_vec();
+        let blur_params = BlurParams{radius: 2, iterations: 3};
 
-    //     // [Green Red]
-    //     // [Yellow Blue]
-    //     let expected_result = vec![0, 255, 0, 255,   
-    //                                         255, 0, 0, 255,  
-    //                                         255, 255, 0, 255, 
-    //                                         0, 0, 255, 255];
+        apply_blur_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, blur_params);
+        
+        assert_eq!(rgba_data, RGBA_3X3_UNIFORM);
+    }
 
-    //     apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
+    #[test]
+    fn test_apply_blur_logic_center_affects_area() {
+        let mut rgba_data: Vec<u8> = RGBA_3X3_BRIGHT_CENTER.to_vec();
+        let blur_params = BlurParams{radius: 2, iterations: 3};
 
-    //     assert_eq!(rgba_data, expected_result);
-    // }
-
-    // #[test]
-    // fn test_apply_mirror_logic_vertical() {
-    //     // Клонируем опорный:       [Red   Green]
-    //     //                          [Blue Yellow]
-    //     let mut rgba_data: Vec<u8> = RGBA_2X2.to_vec();
-    //     // Только вертикальное отражение
-    //     let params = BlurParams { radius: false, iterations: true };
-
-
-    //     let expected_result = vec![0, 0, 255, 255,
-    //                                       255, 255, 0, 255,
-    //                                       255, 0, 0, 255,
-    //                                         0, 255, 0, 255];
-
-    //     apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
-
-    //     assert_eq!(rgba_data, expected_result);
-    // }
-
-    // #[test]
-    // fn test_apply_mirror_logic_both() {
-    //     // Клонируем опорный:       [Red   Green]
-    //     //                          [Blue Yellow]
-    //     let mut rgba_data: Vec<u8> = RGBA_2X2.to_vec();
-    //     let params = BlurParams { radius: true, iterations: true };
-    //     // [Yellow Blue]
-    //     // [Green Red]
-    //     let expected_result = vec![255, 255, 0, 255,
-    //                                         0, 0, 255, 255,
-    //                                         0, 255, 0, 255,
-    //                                         255, 0, 0, 255];
-
-    //     apply_mirror_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, params);
-
-    //     assert_eq!(rgba_data, expected_result);
-    // }
+        apply_blur_logic(&mut rgba_data, WIDTH as u32, HEIGHT as u32, blur_params);
+        
+        for row in 0..HEIGHT {
+            for column in 0..WIDTH {
+                let cur_pixel_pos = (row * WIDTH + column) * RGBA_BYTES_PER_PIXEL as usize;
+                // Этот свалится, для проверки
+                // assert_eq!(rgba_data[cur_pixel_pos + R_OFFSET], 0);
+                
+                // Цвета поменялись
+                assert_ne!(rgba_data[cur_pixel_pos + R_OFFSET], 0);
+                assert_ne!(rgba_data[cur_pixel_pos + G_OFFSET], 0);
+                assert_ne!(rgba_data[cur_pixel_pos + B_OFFSET], 0);
+                // Транспарентность 255 осталась
+                assert_eq!(rgba_data[cur_pixel_pos + A_OFFSET], 255);
+                // assert_eq!(rgba_data[cur_pixel_pos + A_OFFSET], 100);
+            }
+        }
+    }
 }
