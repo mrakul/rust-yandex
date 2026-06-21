@@ -157,7 +157,7 @@ pub extern "C" fn process_image(width: u32,
             println!("Изображение успешно обработано плагином Mirror");
         },
         Ok(Err(parse_error)) => {
-            eprintln!("Ошибка плагина Mirror: {}.\nОбработанное изображение == исходному", parse_error);
+            eprintln!("Ошибка плагина Mirror: {}.\nИсходное изображение не меняется", parse_error);
         },
         Err(_) => {
             eprintln!("Плагин mirror запаниковал!");

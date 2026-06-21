@@ -19,5 +19,8 @@
 #### practice/module_3_blog/
 > Блог: blog-server (backend HTTP / gRPC), blog-client (библиотека), blog-cli (проверка сервера с использованием blog-client), blog-wasm (фронтенд)
 
+#### practice/module_4_ffi_plugins/
+> Обработчик изображений с плагинами
+
 ### theory/
 > Задания во время изучения модуля
