@@ -76,7 +76,7 @@ fn apply_mirror_logic(rgba_data: &mut [u8], width: u32, height: u32, params: Mir
                 let pixel_right = (row * width + (width - 1 - column)) * RGBA_BYTES_PER_PIXEL;
 
                 // Копируем RGBA пикселя побайтно
-                for byte_offset in 0..4 {
+                for byte_offset in 0..RGBA_BYTES_PER_PIXEL {
                     // Хочет usize в параметрах
                     rgba_data.swap((pixel_left + byte_offset) as usize, (pixel_right + byte_offset) as usize);
                 
@@ -98,7 +98,7 @@ fn apply_mirror_logic(rgba_data: &mut [u8], width: u32, height: u32, params: Mir
                 // Симметричный относительно горизонтальной середины
                 let pixel_down = ((height - 1 - row) * width + column) * RGBA_BYTES_PER_PIXEL as u32;
                 // Аналогично
-                for byte_offset in 0..4 {
+                for byte_offset in 0..RGBA_BYTES_PER_PIXEL {
                     rgba_data.swap((pixel_up + byte_offset) as usize, (pixel_down + byte_offset) as usize);
                 }
             }
@@ -153,9 +153,11 @@ pub extern "C" fn process_image(width: u32,
 
     // Тут чуть сложнее получилось: Result<Result<(), String> ...Box dyn >>
     match result {
-        Ok(Ok(())) => {},
+        Ok(Ok(())) => {
+            println!("Изображение успешно обработано плагином Mirror");
+        },
         Ok(Err(parse_error)) => {
-            eprintln!("Ошибка плагина Mirror (парсинг, вероятно): {}.\nОбработанное изображение == исходному", parse_error);
+            eprintln!("Ошибка плагина Mirror: {}.\nОбработанное изображение == исходному", parse_error);
         },
         Err(_) => {
             eprintln!("Плагин mirror запаниковал!");

@@ -1,5 +1,5 @@
 use libloading::{Library, Symbol};
-use std::ffi::{CStr, CString, c_char};
+use std::ffi::{CString, c_char};
 use std::path::Path;
 
 // Предложено в задании

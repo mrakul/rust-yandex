@@ -9,8 +9,11 @@ use image::{ImageBuffer, RgbaImage};
 // Для чтения параметров
 use std::fs;
 
-// cargo run -p image_processor
-// cargo run -p image_processor -- --input ./aux/random_png_1033x775.png --output ./aux/processed_image.png --plugin mirror --params ./aux/params.txt
+// Хелп:
+// cargo run -p image_processor -- --help
+
+// Обработка:
+// cargo run -p image_processor -- --input ./aux/random_png_1033x775.png --output ./aux/processed_image.png --plugin mirror --params ./aux/mirror_params.txt
 
 #[derive(Parser, Debug)]
 #[command(name = "image_processor", about = "CLI для проверки применения плагинов к изображению")]

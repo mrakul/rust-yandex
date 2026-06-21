@@ -9,7 +9,7 @@ struct BlurParams {
 }
 
 const RGBA_BYTES_PER_PIXEL: u32 = 4;
-const R_OFFSET: usize = 0;
+// const R_OFFSET: usize = 0;
 const G_OFFSET: usize = 1;
 const B_OFFSET: usize = 2;
 const A_OFFSET: usize = 3;
@@ -63,7 +63,7 @@ fn parse_blur_params(params_str: &str) -> Result<BlurParams, String>
 fn apply_blur_logic(rgba_data: &mut [u8], width: u32, height: u32, params: BlurParams)
 {
     // Меняем в rgba_data, итерации в промежуточный буфер, чтобы иметь неизменённые значения на каждой итерации
-    let mut picture_iter_snapshot = rgba_data.to_vec();
+    let mut image_iter_snapshot = rgba_data.to_vec();
 
     // N-итераций по каждому пикселю 
     for _ in 0..params.iterations {
@@ -89,10 +89,10 @@ fn apply_blur_logic(rgba_data: &mut [u8], width: u32, height: u32, params: BlurP
                 for area_y in y_min..= y_max {
                     for area_x in x_min..= x_max {
                         let area_pixel = (area_y * width + area_x) * RGBA_BYTES_PER_PIXEL;
-                        area_accum_r += picture_iter_snapshot[area_pixel as usize] as u32;
-                        area_accum_g += picture_iter_snapshot[area_pixel as usize + G_OFFSET] as u32;
-                        area_accum_b += picture_iter_snapshot[area_pixel as usize + B_OFFSET] as u32;
-                        area_accum_a += picture_iter_snapshot[area_pixel as usize + A_OFFSET] as u32;
+                        area_accum_r += image_iter_snapshot[area_pixel as usize] as u32;
+                        area_accum_g += image_iter_snapshot[area_pixel as usize + G_OFFSET] as u32;
+                        area_accum_b += image_iter_snapshot[area_pixel as usize + B_OFFSET] as u32;
+                        area_accum_a += image_iter_snapshot[area_pixel as usize + A_OFFSET] as u32;
                         area_pixel_cnt += 1;
                     }
                 }
@@ -112,7 +112,7 @@ fn apply_blur_logic(rgba_data: &mut [u8], width: u32, height: u32, params: BlurP
         }
 
         // memcpy в послеитерационный буфер всего буфера
-        picture_iter_snapshot.copy_from_slice(rgba_data);
+        image_iter_snapshot.copy_from_slice(rgba_data);
     }
 }
 
@@ -157,9 +157,11 @@ pub extern "C" fn process_image(width: u32,
 
     // Тут чуть сложнее получилось: Result<Result<(), String> ...Box dyn >>
     match result {
-        Ok(Ok(())) => {},
+        Ok(Ok(())) => {
+            println!("Изображение успешно обработано плагином Blur");
+        },
         Ok(Err(parse_error)) => {
-            eprintln!("Ошибка плагина Blur (парсинг, вероятно): {}.\nОбработанное изображение == исходному", parse_error);
+            eprintln!("Ошибка плагина Blur: {}.\nИсходное изображение не меняется", parse_error);
         },
         Err(_) => {
             eprintln!("Плагин Blur запаниковал!");
@@ -265,10 +267,10 @@ mod tests {
             for column in 0..WIDTH {
                 let cur_pixel_pos = (row * WIDTH + column) * RGBA_BYTES_PER_PIXEL as usize;
                 // Этот свалится, для проверки
-                // assert_eq!(rgba_data[cur_pixel_pos + R_OFFSET], 0);
+                // assert_eq!(rgba_data[cur_pixel_pos], 0);
                 
                 // Цвета поменялись
-                assert_ne!(rgba_data[cur_pixel_pos + R_OFFSET], 0);
+                assert_ne!(rgba_data[cur_pixel_pos], 0);
                 assert_ne!(rgba_data[cur_pixel_pos + G_OFFSET], 0);
                 assert_ne!(rgba_data[cur_pixel_pos + B_OFFSET], 0);
                 // Транспарентность 255 осталась
