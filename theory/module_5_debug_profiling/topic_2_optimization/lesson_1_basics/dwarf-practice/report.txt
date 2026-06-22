@@ -1,0 +1,73 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 4
+#
+# Samples: 258  of event 'task-clock:uppp'
+# Event count (approx.): 258776322
+#
+# Children      Self  Command         Shared Object   Symbol                                                                                                   
+# ........  ........  ..............  ..............  .........................................................................................................
+#
+   100.00%   100.00%  dwarf-practice  dwarf-practice  [.] dwarf_practice::main
+            |
+            ---_start
+               __libc_start_main_impl (inlined)
+               main
+               dwarf_practice::main
+               dwarf_practice::accumulating (inlined)
+               |          
+                --36.82%--core::num::<impl u64>::wrapping_add (inlined)
+
+   100.00%     0.00%  dwarf-practice  dwarf-practice  [.] _start
+            |
+            ---_start
+               __libc_start_main_impl (inlined)
+               main
+               |          
+               |--70.16%--dwarf_practice::main
+               |          dwarf_practice::accumulating (inlined)
+               |          |          
+               |           --28.29%--core::num::<impl u64>::wrapping_add (inlined)
+               |          
+                --29.84%--0x5d43446dc17d
+                          0x5d43446dc17d
+                          |          
+                           --8.53%--0x5d43446dc18b
+
+   100.00%     0.00%  dwarf-practice  libc.so.6       [.] __libc_start_main_impl (inlined)
+            |
+            ---__libc_start_main_impl (inlined)
+               main
+               dwarf_practice::main
+               dwarf_practice::accumulating (inlined)
+               |          
+                --36.82%--core::num::<impl u64>::wrapping_add (inlined)
+
+   100.00%     0.00%  dwarf-practice  dwarf-practice  [.] main
+            |
+            ---main
+               dwarf_practice::main
+               dwarf_practice::accumulating (inlined)
+               |          
+                --36.82%--core::num::<impl u64>::wrapping_add (inlined)
+
+   100.00%     0.00%  dwarf-practice  dwarf-practice  [.] dwarf_practice::accumulating (inlined)
+            |
+            ---dwarf_practice::accumulating (inlined)
+               |          
+                --36.82%--core::num::<impl u64>::wrapping_add (inlined)
+
+    36.82%     0.00%  dwarf-practice  dwarf-practice  [.] core::num::<impl u64>::wrapping_add (inlined)
+            |
+            ---core::num::<impl u64>::wrapping_add (inlined)
+
+     0.39%     0.00%  dwarf-practice  dwarf-practice  [.] core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+     0.39%     0.00%  dwarf-practice  dwarf-practice  [.] <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+     0.39%     0.00%  dwarf-practice  dwarf-practice  [.] <u64 as core::iter::range::Step>::forward_unchecked (inlined)
+     0.39%     0.00%  dwarf-practice  dwarf-practice  [.] core::num::<impl u64>::unchecked_add (inlined)
+
+
+#
+# (Tip: To analyze particular parallelism levels, try: perf report --latency --parallelism=32-64)
+#

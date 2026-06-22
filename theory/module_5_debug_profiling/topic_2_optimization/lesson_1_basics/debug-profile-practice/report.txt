@@ -1,0 +1,215 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 5K of event 'task-clock:uppp'
+# Event count (approx.): 1315500000
+#
+# Children      Self  Command          Shared Object           Symbol                                                                                                   
+# ........  ........  ...............  ......................  .........................................................................................................
+#
+    99.98%    99.98%  debug-profile-p  debug-profile-practice  [.] debug_profile_practice::main
+            |
+            ---_start
+               __libc_start_main_impl (inlined)
+               main
+               debug_profile_practice::main
+               |          
+                --92.80%--debug_profile_practice::sum_of_squares (inlined)
+                          debug_profile_practice::slow_function (inlined)
+                          |          
+                          |--48.88%--core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+                          |          <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+                          |          |          
+                          |          |--43.75%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+                          |          |          
+                          |          |--3.21%--core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+                          |          |          
+                          |           --0.89%--<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+                          |                     core::num::<impl u64>::unchecked_add (inlined)
+                          |          
+                          |--28.70%--core::num::<impl u64>::wrapping_add (inlined)
+                          |          
+                           --12.92%--core::hint::black_box (inlined)
+
+    99.98%     0.00%  debug-profile-p  debug-profile-practice  [.] _start
+            |
+            ---_start
+               __libc_start_main_impl (inlined)
+               main
+               |          
+               |--98.86%--0x579f3dab7238
+               |          |          
+               |           --91.70%--0x579f3dab7238
+               |                     0x579f3dab7238
+               |                     |          
+               |                     |--48.06%--0x579f3dab7238
+               |                     |          0x579f3dab7238
+               |                     |          |          
+               |                     |          |--42.95%--0x579f3dab7238
+               |                     |          |          
+               |                     |          |--3.19%--0x579f3dab7240
+               |                     |          |          
+               |                     |           --0.89%--0x579f3dab723d
+               |                     |                     0x579f3dab723d
+               |                     |          
+               |                     |--28.64%--0x579f3dab7235
+               |                     |          
+               |                      --12.75%--0x579f3dab7225
+               |          
+                --1.12%--debug_profile_practice::main
+                          |          
+                           --1.10%--debug_profile_practice::sum_of_squares (inlined)
+                                     debug_profile_practice::slow_function (inlined)
+                                     |          
+                                      --0.82%--core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+                                                <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+                                                |          
+                                                 --0.80%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+
+    99.98%     0.00%  debug-profile-p  libc.so.6               [.] __libc_start_main_impl (inlined)
+            |
+            ---__libc_start_main_impl (inlined)
+               main
+               debug_profile_practice::main
+               |          
+                --92.80%--debug_profile_practice::sum_of_squares (inlined)
+                          debug_profile_practice::slow_function (inlined)
+                          |          
+                          |--48.88%--core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+                          |          <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+                          |          |          
+                          |          |--43.75%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+                          |          |          
+                          |          |--3.21%--core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+                          |          |          
+                          |           --0.89%--<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+                          |                     core::num::<impl u64>::unchecked_add (inlined)
+                          |          
+                          |--28.70%--core::num::<impl u64>::wrapping_add (inlined)
+                          |          
+                           --12.92%--core::hint::black_box (inlined)
+
+    99.98%     0.00%  debug-profile-p  debug-profile-practice  [.] main
+            |
+            ---main
+               debug_profile_practice::main
+               |          
+                --92.80%--debug_profile_practice::sum_of_squares (inlined)
+                          debug_profile_practice::slow_function (inlined)
+                          |          
+                          |--48.88%--core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+                          |          <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+                          |          |          
+                          |          |--43.75%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+                          |          |          
+                          |          |--3.21%--core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+                          |          |          
+                          |           --0.89%--<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+                          |                     core::num::<impl u64>::unchecked_add (inlined)
+                          |          
+                          |--28.70%--core::num::<impl u64>::wrapping_add (inlined)
+                          |          
+                           --12.92%--core::hint::black_box (inlined)
+
+    92.91%     0.00%  debug-profile-p  debug-profile-practice  [.] debug_profile_practice::slow_function (inlined)
+            |
+            ---debug_profile_practice::slow_function (inlined)
+               |          
+               |--48.97%--core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+               |          <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+               |          |          
+               |          |--43.84%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+               |          |          
+               |          |--3.21%--core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+               |          |          
+               |           --0.89%--<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+               |                     core::num::<impl u64>::unchecked_add (inlined)
+               |          
+               |--28.72%--core::num::<impl u64>::wrapping_add (inlined)
+               |          
+                --12.92%--core::hint::black_box (inlined)
+
+    92.80%     0.00%  debug-profile-p  debug-profile-practice  [.] debug_profile_practice::sum_of_squares (inlined)
+            |
+            ---debug_profile_practice::sum_of_squares (inlined)
+               debug_profile_practice::slow_function (inlined)
+               |          
+               |--48.88%--core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+               |          <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+               |          |          
+               |          |--43.75%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+               |          |          
+               |          |--3.21%--core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+               |          |          
+               |           --0.89%--<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+               |                     core::num::<impl u64>::unchecked_add (inlined)
+               |          
+               |--28.70%--core::num::<impl u64>::wrapping_add (inlined)
+               |          
+                --12.92%--core::hint::black_box (inlined)
+
+    48.97%     0.00%  debug-profile-p  debug-profile-practice  [.] core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+            |
+            ---core::iter::range::<impl core::iter::traits::iterator::Iterator for core::ops::range::Range<A>>::next (inlined)
+               <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+               |          
+               |--43.84%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+               |          
+               |--3.21%--core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+               |          
+                --0.89%--<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+                          core::num::<impl u64>::unchecked_add (inlined)
+
+    48.97%     0.00%  debug-profile-p  debug-profile-practice  [.] <core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+            |
+            ---<core::ops::range::Range<T> as core::iter::range::RangeIteratorImpl>::spec_next (inlined)
+               |          
+               |--43.84%--core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+               |          
+               |--3.21%--core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+               |          
+                --0.89%--<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+                          core::num::<impl u64>::unchecked_add (inlined)
+
+    43.84%     0.00%  debug-profile-p  debug-profile-practice  [.] core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+            |
+            ---core::cmp::impls::<impl core::cmp::PartialOrd for i32>::lt (inlined)
+
+    28.72%     0.00%  debug-profile-p  debug-profile-practice  [.] core::num::<impl u64>::wrapping_add (inlined)
+            |
+            ---core::num::<impl u64>::wrapping_add (inlined)
+
+    12.92%     0.00%  debug-profile-p  debug-profile-practice  [.] core::hint::black_box (inlined)
+            |
+            ---core::hint::black_box (inlined)
+
+     3.21%     0.00%  debug-profile-p  debug-profile-practice  [.] core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+            |
+            ---core::cmp::impls::<impl core::cmp::PartialOrd for u64>::lt (inlined)
+
+     0.89%     0.00%  debug-profile-p  debug-profile-practice  [.] <u64 as core::iter::range::Step>::forward_unchecked (inlined)
+            |
+            ---<u64 as core::iter::range::Step>::forward_unchecked (inlined)
+               core::num::<impl u64>::unchecked_add (inlined)
+
+     0.89%     0.00%  debug-profile-p  debug-profile-practice  [.] core::num::<impl u64>::unchecked_add (inlined)
+            |
+            ---core::num::<impl u64>::unchecked_add (inlined)
+
+     0.02%     0.02%  debug-profile-p  ld-linux-x86-64.so.2    [.] intel_check_word.constprop.0
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] _start
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] _dl_start
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] _dl_start_final (inlined)
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] _dl_sysdep_start
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] dl_platform_init (inlined)
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] init_cpu_features (inlined)
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] dl_init_cacheinfo (inlined)
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] handle_intel (inlined)
+     0.02%     0.00%  debug-profile-p  ld-linux-x86-64.so.2    [.] intel_check_word (inlined)
+
+
+#
+# (Tip: Create an archive with symtabs to analyse on other machine: perf archive)
+#

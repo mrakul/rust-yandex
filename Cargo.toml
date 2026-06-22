@@ -11,6 +11,9 @@ members = ["theory/module_4_ffi_unsafe/topic_3_libraries/lesson_3_plugins/comple
     # "practice/module_2/quotes-streaming",
     # , "theory/module_4_ffi_unsafe/topic_1_linking/lesson_1_linking/hello-dyn"
     # "theory/module_4_ffi_unsafe/topic_2_libraries/lesson_1_bindgen/rust_to_python"
+    # , "theory/module_5_debug_profiling/topic_2_optimization/lesson_1_basics/debug-profile-practice"
+    # , "theory/module_5_debug_profiling/topic_2_optimization/lesson_1_basics/dwarf-practice"
+    # , "theory/module_5_debug_profiling/topic_2_optimization/lesson_1_basics/bad-factorial"
     ]
 
 # Пока помечаю проекты независимыми (в VSCode тогда открывать отдельно директории, а то rust-analyzer не сдюжит)

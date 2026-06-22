@@ -1,0 +1,11 @@
+[package]
+name = "debug-profile-practice"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+# Для профилировщика
+[profile.release]
+debug = 1
+# debug = 2  # Полная отладочная информация

@@ -1,0 +1,11 @@
+Отладка в Rust:
+https://rustc-dev-guide.rust-lang.org/debugging-support-in-rustc.html
+
+GDB:
+https://sourceware.org/gdb/documentation/
+
+perf:
+https://perfwiki.github.io/main/
+
+flamegraph:
+https://github.com/flamegraph-rs/flamegraph
