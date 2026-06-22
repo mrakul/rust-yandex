@@ -66,6 +66,8 @@ fn process_image_with_plugin( input_path: &PathBuf, output_path: &PathBuf,
 
     /*** Загрузка плагина, ... */
 
+    // TODO: сделать через std::env::consts::DLL_PREFIX и std::env::consts::DLL_SUFFIX
+    // для Windows и MacOS
     let lib_linux_filename = format!("lib{}_plugin.so", plugin_name);
     let full_plugin_path = base_plugin_path.join(&lib_linux_filename);
     println!("Загрузка плагина: {}", full_plugin_path.display());
@@ -134,7 +136,8 @@ fn main() {
         }
         Err(error) => {
             eprintln!("Ошибка обработки: {}", error);
-            // std::process::exit(1);
+            // Завершаем с кодом-ошибкой
+            std::process::exit(1);
         }
     }
 

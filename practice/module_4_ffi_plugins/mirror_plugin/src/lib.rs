@@ -128,9 +128,8 @@ pub extern "C" fn process_image(width: u32,
             
             // CStr -> &str
             let params_str = params_cstr.to_str()
-                .map_err(|_| "Есть не UTF-8 символы")
-                // Оставляю так, поскольку панику ловим, но понимаю, в прод бы сделал получше
-                .unwrap();
+                // И правда, можно вернуть через ? здесь, а не ловить панику
+                .map_err(|_| "Есть не UTF-8 символы")?;
             
             // Парсим параметры, ошибку пропагируем, тип - в catch_unwind-замыкании
             let params_to_use = parse_mirror_params(params_str)?;
