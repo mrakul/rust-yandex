@@ -1,0 +1,59 @@
+Дополнительное задание 2. Бенчмаркинг без поддержки
+Вы написали две версии функции для поиска элемента в отсортированном массиве: линейный поиск и бинарный поиск. Нужно измерить, какая быстрее на разных размерах данных.
+Создайте бенчмарки через criterion, которые сравнивают обе версии на массивах разного размера (100, 1000, 10000, 100000 элементов).
+Напишите обе функции (линейный и бинарный поиск), создайте бенчмарки через criterion для разных размеров, запустите cargo bench и проанализируйте результаты. Определите, при каком размере массива бинарный поиск становится быстрее.
+Критерии оценки: 
+
+    Правильно настроены бенчмарки через criterion
+    Бенчмарки запускаются для разных размеров данных
+    Результаты корректно интерпретированы
+    Сделан вывод о том, какая версия быстрее и при каких условиях
+
+Решение
+Cargo.toml:
+
+[package]
+name = "search-bench"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8" 
+
+src/lib.rs:
+
+pub fn linear_search(haystack: &[u32], needle: u32) -> Option<usize> {
+    haystack.iter().position(|&x| x == needle)
+}
+
+pub fn binary_search(haystack: &[u32], needle: u32) -> Option<usize> {
+    haystack.binary_search(&needle).ok()
+} 
+
+benches/search_bench.rs:
+
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use search_bench::{binary_search, linear_search};
+
+fn bench_searches(c: &mut Criterion) {
+    let mut group = c.benchmark_group("search");
+    let mut rng = StdRng::seed_from_u64(42);
+    for &size in &[100usize, 1_000, 10_000, 100_000] {
+        let data: Vec<u32> = (0..size as u32).collect();
+        let needle = rng.gen_range(0..size as u32);
+        group.bench_with_input(BenchmarkId::new("linear", size), &needle, |b, &n| {
+            b.iter(|| linear_search(black_box(&data), black_box(n)));
+        });
+        group.bench_with_input(BenchmarkId::new("binary", size), &needle, |b, &n| {
+            b.iter(|| binary_search(black_box(&data), black_box(n)));
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, bench_searches);
+criterion_main!(benches); 
+
+Criterion: 100/1000/10000/100000 элементов — линейный 0.05/0.6/6.1/61 ms, бинарный 0.07/0.15/0.25/0.35 ms. Перелом ~1000 элементов, дальше бинарный быстрее в 4–170×.

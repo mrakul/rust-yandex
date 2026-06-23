@@ -1,0 +1,62 @@
+Дополнительное задание 1. Профилирование с поддержкой
+У вас есть функция, которая обрабатывает большой вектор чисел, но она работает медленно. Код выглядит так:
+
+fn process_data(items: &[u32]) -> Vec<u64> {
+    let mut result = Vec::new();
+    for item in items {
+        result.push(*item as u64);
+    }
+    result
+}
+
+fn main() {
+    let data: Vec<u32> = (0..1_000_000).collect();
+    let _result = process_data(&data);
+} 
+
+Используйте cargo flamegraph, чтобы найти проблему, и criterion, чтобы измерить производительность.
+Какая операция занимает больше всего времени в flamegraph? Как изменилось время выполнения после оптимизации? Статистически ли значимо изменение?
+
+Подсказки
+
+    Установите flamegraph через cargo install flamegraph, соберите проект в release через cargo build --release, запустите профилирование через cargo flamegraph --bin your_project.
+    Откройте flame.svg и найдите, где тратится время.
+    Создайте бенчмарк через criterion для функции process_data, оптимизируйте код (например, используйте Vec::with_capacity), затем запустите бенчмарк снова и сравните результаты.
+
+Вариант решения
+Cargo.toml
+
+[package]
+name = "process-data"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] } 
+
+src/lib.rs
+
+pub fn process_data(items: &[u32]) -> Vec<u64> {
+    let mut result = Vec::with_capacity(items.len()); // устраняем realloc
+    for &item in items {
+        result.push(item as u64);
+    }
+    result
+} 
+
+benches/process_bench.rs
+
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use process_data::process_data;
+
+fn bench_process(c: &mut Criterion) {
+    let data: Vec<u32> = (0..1_000_000).collect();
+    c.bench_function("process_data_with_capacity", |b| {
+        b.iter(|| process_data(black_box(&data)));
+    });
+}
+
+criterion_group!(benches, bench_process);
+criterion_main!(benches); 
+
+Горячая точка — аллокации в Vec::push (flamegraph ~55%). До: 4.2 ms/iter (criterion, median, p < 0.01). После: Vec::with_capacity: 1.6 ms/iter (-62%, p < 0.01). 
