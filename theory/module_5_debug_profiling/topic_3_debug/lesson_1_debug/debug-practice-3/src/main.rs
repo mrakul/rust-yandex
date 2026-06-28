@@ -1,7 +1,7 @@
 // В VSCode на правую кнопку breakpoint'а => target == 30, разницы нет с C/C++ кодом, всё так же 
 
 fn find_index(numbers: &[i32], target: i32) -> Option<usize> {
-    for i in 0..numbers.len() {
+    for i in 0..7 {
         if numbers[i] == target {
             return Some(i);
         }

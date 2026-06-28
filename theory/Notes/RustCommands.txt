@@ -1,6 +1,24 @@
 # Обновления rustc и всего прочего
 rustup update
 
+# Показать установленные компиляторы:
+rustup show
+# Пример вывода, если дополнительно установлен nighlty:
+Default host: x86_64-unknown-linux-gnu
+rustup home:  /home/m_rakul/.rustup
+
+installed toolchains
+--------------------
+stable-x86_64-unknown-linux-gnu (active, default)
+nightly-x86_64-unknown-linux-gnu
+
+# Установить nightly + компонент miri:
+rustup toolchain install nightly --component miri --force
+(rustup +nightly component add miri)
+
+# Удалить toolchain:
+rustup toolchain uninstall nightly
+
 # Обновления в проекте связанных crate'сов
 cargo update
 
