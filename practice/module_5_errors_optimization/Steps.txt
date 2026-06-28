@@ -80,3 +80,119 @@ test sums_even_numbers ... ok
 test race_increment_is_correct ... ok
 
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+>>> Один раз приведу использование rust-gdb, если возникнут вопросы при проверке
+(но дальше для дебага буду использовать VSCode, launch.json приведён, или rust-analyzer можно использовать без настройки при нажатии на функцию)
+(в разделе теории на всякий случай освежил в памяти команды здесь:
+https://github.com/mrakul/rust-yandex/blob/main/theory/module_5_debug_profiling/topic_2_optimization/lesson_1_basics/debug-profile-practice/src/main.rs)
+
+Вывод => паника на проверку UB, поскольку сборка в режиме Debug
+
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ rust-gdb ./target/debug/demo
+...
+(gdb) b broken_app::sum_even
+Breakpoint 1 at 0x1d234: file src/lib.rs, line 8.
+(gdb) run
+Starting program: /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/debug/demo 
+...
+Breakpoint 1, broken_app::sum_even (values=&[i64](size=4) = {...}) at src/lib.rs:8
+8           let mut acc = 0;
+(gdb) n
+10              for idx in 0..=values.len() {
+(gdb) n
+11                  let v = *values.get_unchecked(idx);
+(gdb) p idx
+$1 = 0
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+10              for idx in 0..=values.len() {
+(gdb) n
+11                  let v = *values.get_unchecked(idx);
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) p idx
+$2 = 1
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+13                      acc += v;
+(gdb) p v
+$3 = 2
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+10              for idx in 0..=values.len() {
+(gdb) n
+11                  let v = *values.get_unchecked(idx);
+(gdb) p idx
+$4 = 2
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+10              for idx in 0..=values.len() {
+(gdb) n
+11                  let v = *values.get_unchecked(idx);
+(gdb) p idx
+$5 = 3
+(gdb) p idx
+$6 = 3
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+12                  if v % 2 == 0 {
+(gdb) n
+13                      acc += v;
+(gdb) p idx
+$7 = 3
+(gdb) p v
+$8 = 4
+(gdb) next
+12                  if v % 2 == 0 {
+(gdb) next
+10              for idx in 0..=values.len() {
+(gdb) next
+11                  let v = *values.get_unchecked(idx);
+(gdb) p idx
+$9 = 4
+(gdb) next
+
+thread 'main' (714352) panicked at src/lib.rs:11:29:
+unsafe precondition(s) violated: slice::get_unchecked requires that the index is within the slice
+
+This indicates a bug in the program. This Undefined Behavior check is optional, and cannot be relied on for safety.
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread caused non-unwinding panic. aborting.
+
+Program received signal SIGABRT, Aborted.
+__pthread_kill_implementation (no_tid=0, signo=6, threadid=<optimized out>) at ./nptl/pthread_kill.c:44
+warning: 44     ./nptl/pthread_kill.c: No such file or directory
+
+ИЛИ ТАК:
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ rust-gdb ./target/debug/demo
+
+...
+(gdb) break src/lib.rs:11 if idx == 4
+Breakpoint 1 at 0x1d2b7: file src/lib.rs, line 11.
+(gdb) run
+Starting program: /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/debug/demo 
+...
+Breakpoint 1, broken_app::sum_even (values=&[i64](size=4) = {...}) at src/lib.rs:11
+11                  let v = *values.get_unchecked(idx);
+(gdb) next
+
+thread 'main' (724735) panicked at src/lib.rs:11:29:
+unsafe precondition(s) violated: slice::get_unchecked requires that the index is within the slice
+
+This indicates a bug in the program. This Undefined Behavior check is optional, and cannot be relied on for safety.
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread caused non-unwinding panic. aborting.
+
+Program received signal SIGABRT, Aborted.
+__pthread_kill_implementation (no_tid=0, signo=6, threadid=<optimized out>) at ./nptl/pthread_kill.c:44
+warning: 44     ./nptl/pthread_kill.c: No such file or directory
+(gdb) 
