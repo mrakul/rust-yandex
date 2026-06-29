@@ -1,0 +1,564 @@
+>>> Просто тесты:
+> cargo test --test uaf_and_concurrency
+...
+running 2 tests
+test race_increment_is_correct ... FAILED
+test test_use_after_free ... FAILED
+
+failures:
+
+---- race_increment_is_correct stdout ----
+
+thread 'race_increment_is_correct' (1036784) panicked at tests/uaf_and_concurrency.rs:11:5:
+assertion `left == right` failed
+  left: 3974
+ right: 4000
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- test_use_after_free stdout ----
+
+thread 'test_use_after_free' (1036785) panicked at tests/uaf_and_concurrency.rs:19:9:
+assertion `left == right` failed
+  left: 126765158
+ right: 84
+
+
+failures:
+    race_increment_is_correct
+    test_use_after_free
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `--test uaf_and_concurrency`
+
+Комментарий: оба теста свалились, надо править.
+
+
+>>> ASAN:
+
+> RUSTFLAGS="-Z sanitizer=address" cargo +nightly test --test uaf_and_concurrency --target x86_64-unknown-linux-gnu
+
+Вывод:
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=address" cargo +nightly test --test uaf_and_concurrency --target x86_64-unknown-linux-gnu
+warning: failed to auto-clean cache data
+
+failed to clean entries from the global cache
+
+Caused by:
+  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
+
+Caused by:
+  Permission denied (os error 13)
+   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
+warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
+  --> src/lib.rs:84:15
+   |
+84 |     let val = *raw;
+   |               ^^^^ dereference of raw pointer
+   |
+   = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+note: an unsafe function restricts its caller, but its body is safe by default
+  --> src/lib.rs:81:1
+   |
+81 | pub unsafe fn use_after_free() -> i32 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+   = note: `#[warn(unsafe_op_in_unsafe_fn)]` (part of `#[warn(rust_2024_compatibility)]`) on by default
+
+warning[E0133]: call to unsafe function `std::boxed::Box::<T>::from_raw` is unsafe and requires unsafe block
+  --> src/lib.rs:85:10
+   |
+85 |     drop(Box::from_raw(raw));
+   |          ^^^^^^^^^^^^^^^^^^ call to unsafe function
+   |
+   = note: consult the function's documentation for information on how to avoid undefined behavior
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+
+warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
+  --> src/lib.rs:86:11
+   |
+86 |     val + *raw
+   |           ^^^^ dereference of raw pointer
+   |
+   = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+
+For more information about this error, try `rustc --explain E0133`.
+warning: `broken-app` (lib) generated 3 warnings (run `cargo fix --lib -p broken-app` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.77s
+     Running tests/uaf_and_concurrency.rs (target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71)
+
+running 2 tests
+=================================================================
+==1030996==ERROR: AddressSanitizer: heap-use-after-free on address 0x7c1025de4010 at pc 0x60c0e5c4b9d5 bp 0x7bf0235fd350 sp 0x7bf0235fd348
+READ of size 4 at 0x7c1025de4010 thread T2
+==1030996==WARNING: invalid path to external symbolizer!
+==1030996==WARNING: Failed to use and restart external symbolizer!
+    #0 0x60c0e5c4b9d4  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1679d4) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #1 0x60c0e5c0a42a  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x12642a) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #2 0x60c0e5c09b66  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x125b66) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #3 0x60c0e5c09fb5  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x125fb5) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #4 0x60c0e5c0abfa  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x126bfa) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #5 0x60c0e5c18274  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x134274) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #6 0x60c0e5c11b93  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x12db93) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #7 0x60c0e5c1b3b1  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1373b1) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #8 0x60c0e5c8e95e  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1aa95e) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #9 0x60c0e5bd9386  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0xf5386) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #10 0x7ff026c9caa3  (/lib/x86_64-linux-gnu/libc.so.6+0x9caa3) (BuildId: 8e9fd827446c24067541ac5390e6f527fb5947bb)
+    #11 0x7ff026d29c6b  (/lib/x86_64-linux-gnu/libc.so.6+0x129c6b) (BuildId: 8e9fd827446c24067541ac5390e6f527fb5947bb)
+
+0x7c1025de4010 is located 0 bytes inside of 4-byte region [0x7c1025de4010,0x7c1025de4014)
+freed by thread T2 here:
+    #0 0x60c0e5bdb446  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0xf7446) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #1 0x60c0e5c56334  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x172334) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #2 0x60c0e5c4b949  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x167949) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #3 0x60c0e5c09b66  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x125b66) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #4 0x60c0e5c18274  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x134274) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #5 0x60c0e5c11b93  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x12db93) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #6 0x60c0e5c1b3b1  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1373b1) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #7 0x60c0e5c8e95e  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1aa95e) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #8 0x60c0e5bd9386  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0xf5386) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+
+previously allocated by thread T2 here:
+    #0 0x60c0e5bdb6e4  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0xf76e4) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #1 0x60c0e5c561e3  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1721e3) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #2 0x60c0e5c09b66  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x125b66) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #3 0x60c0e5c18274  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x134274) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #4 0x60c0e5c11b93  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x12db93) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #5 0x60c0e5c1b3b1  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1373b1) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #6 0x60c0e5c8e95e  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1aa95e) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #7 0x60c0e5bd9386  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0xf5386) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+
+Thread T2 created by T0 here:
+    #0 0x60c0e5bbf281  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0xdb281) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #1 0x60c0e5c731e0  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x18f1e0) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #2 0x60c0e5c1de12  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x139e12) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #3 0x60c0e5c31625  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x14d625) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #4 0x60c0e5c1ccca  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x138cca) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #5 0x60c0e5c0a362  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x126362) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #6 0x60c0e5c0a90f  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x12690f) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #7 0x60c0e5c0a65d  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x12665d) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+    #8 0x7ff026c2a28a  (/lib/x86_64-linux-gnu/libc.so.6+0x2a28a) (BuildId: 8e9fd827446c24067541ac5390e6f527fb5947bb)
+    #9 0x60c0e5b4f124  (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x6b124) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea)
+
+SUMMARY: AddressSanitizer: heap-use-after-free (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71+0x1679d4) (BuildId: bbd8cad29dfd6ea0ef25b6ed60f92fdca21002ea) 
+Shadow bytes around the buggy address:
+  0x7c1025de3d80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de3e00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de3e80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de3f00: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de3f80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x7c1025de4000: fa fa[fd]fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de4080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de4100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de4180: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de4200: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x7c1025de4280: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==1030996==ABORTING
+error: test failed, to rerun pass `--test uaf_and_concurrency`
+
+Caused by:
+  process didn't exit successfully: `/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71` (exit status: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+
+Комментарий:
+С LLVM чуть поборолся, символы не показались, но ошибку видно, размер - 4 байта:
+==1030996==ERROR: AddressSanitizer: heap-use-after-free on address 0x7c1025de4010 at pc 0x60c0e5c4b9d5 bp 0x7bf0235fd350 sp 0x7bf0235fd348
+READ of size 4 at 0x7c1025de4010 thread T2
+
+
+>>> TSAN:
+
+> RUSTFLAGS="-Z sanitizer=thread" cargo +nightly test --test uaf_and_concurrency -Zbuild-std --target x86_64-unknown-linux-gnu
+
+Вывод:
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=thread" cargo +nightly test --test uaf_and_concurrency -Zbuild-std --target x86_64-unknown-linux-gnu
+warning: failed to auto-clean cache data
+
+failed to clean entries from the global cache
+
+Caused by:
+  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
+
+Caused by:
+  Permission denied (os error 13)
+warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
+  --> src/lib.rs:85:15
+   |
+85 |     let val = *raw;
+   |               ^^^^ dereference of raw pointer
+   |
+   = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+note: an unsafe function restricts its caller, but its body is safe by default
+  --> src/lib.rs:82:1
+   |
+82 | pub unsafe fn use_after_free() -> i32 {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+   = note: `#[warn(unsafe_op_in_unsafe_fn)]` (part of `#[warn(rust_2024_compatibility)]`) on by default
+
+warning[E0133]: call to unsafe function `std::boxed::Box::<T>::from_raw` is unsafe and requires unsafe block
+  --> src/lib.rs:86:10
+   |
+86 |     drop(Box::from_raw(raw));
+   |          ^^^^^^^^^^^^^^^^^^ call to unsafe function
+   |
+   = note: consult the function's documentation for information on how to avoid undefined behavior
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+
+warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
+  --> src/lib.rs:87:11
+   |
+87 |     val + *raw
+   |           ^^^^ dereference of raw pointer
+   |
+   = note: raw pointers may be null, dangling or unaligned; they can violate aliasing rules and cause data races: all of these are undefined behavior
+   = note: for more information, see <https://doc.rust-lang.org/edition-guide/rust-2024/unsafe-op-in-unsafe-fn.html>
+
+For more information about this error, try `rustc --explain E0133`.
+warning: `broken-app` (lib) generated 3 warnings (run `cargo fix --lib -p broken-app` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.33s
+     Running tests/uaf_and_concurrency.rs (target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-1eea3587a88e1195)
+
+running 2 tests
+==================
+WARNING: ThreadSanitizer: heap-use-after-free (pid=1042182)
+  Read of size 4 at 0x7204000017c0 by thread T3:
+    #0 broken_app::use_after_free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/lib.rs:87 (uaf_and_concurrency-1eea3587a88e1195+0x38f01b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 uaf_and_concurrency::test_use_after_free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:19 (uaf_and_concurrency-1eea3587a88e1195+0x23e3e6) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 uaf_and_concurrency::test_use_after_free::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:17 (uaf_and_concurrency-1eea3587a88e1195+0x23ec3b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <uaf_and_concurrency::test_use_after_free::{closure#0} as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x23e726) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e6e4d) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:724 (uaf_and_concurrency-1eea3587a88e1195+0x241eea) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 <test::types::RunnableTest>::run /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145 (uaf_and_concurrency-1eea3587a88e1195+0x2a5b39) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 test::run_test_in_process::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x248b94) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b314) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b09ed) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 std::panicking::catch_unwind::<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2adb7b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #12 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29df48) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #13 test::run_test_in_process /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x24ca1e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #14 test::run_test::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:668 (uaf_and_concurrency-1eea3587a88e1195+0x249bfb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #15 test::run_test::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:698 (uaf_and_concurrency-1eea3587a88e1195+0x24a0fc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #16 std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x362001) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #17 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x272503) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #18 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b2a9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #19 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b08bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #20 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #21 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2addcb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #22 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29dec9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #23 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x271d52) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #24 <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e03e5) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #25 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #26 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Previous write of size 8 at 0x7204000017c0 by thread T3:
+    #0 free /rustc/llvm/src/llvm-project/compiler-rt/lib/tsan/rtl/tsan_interceptors_posix.cpp:735 (uaf_and_concurrency-1eea3587a88e1195+0x1b0c4a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 <std::alloc::System as core::alloc::global::GlobalAlloc>::dealloc /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/alloc/unix.rs:48 (uaf_and_concurrency-1eea3587a88e1195+0x534bbf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 __rustc::__rdl_dealloc /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/alloc.rs:463 (uaf_and_concurrency-1eea3587a88e1195+0x417751) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 alloc::alloc::dealloc_nonnull /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:128 (uaf_and_concurrency-1eea3587a88e1195+0x39160a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 <alloc::alloc::Global>::deallocate_impl_runtime /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:229 (uaf_and_concurrency-1eea3587a88e1195+0x3914ab) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 <alloc::alloc::Global>::deallocate_impl /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:344 (uaf_and_concurrency-1eea3587a88e1195+0x3910ec) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 <alloc::alloc::Global as core::alloc::Allocator>::deallocate /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:462 (uaf_and_concurrency-1eea3587a88e1195+0x39173e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 <alloc::boxed::Box<i32> as core::ops::drop::Drop>::drop /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:1954 (uaf_and_concurrency-1eea3587a88e1195+0x38d97b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 core::ptr::drop_glue::<alloc::boxed::Box<i32>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ptr/mod.rs:825 (uaf_and_concurrency-1eea3587a88e1195+0x38ce6f) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 core::mem::drop::<alloc::boxed::Box<i32>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/mem/mod.rs:1041 (uaf_and_concurrency-1eea3587a88e1195+0x38eac9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 broken_app::use_after_free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/lib.rs:86 (uaf_and_concurrency-1eea3587a88e1195+0x38efc4) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 uaf_and_concurrency::test_use_after_free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:19 (uaf_and_concurrency-1eea3587a88e1195+0x23e3e6) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #12 uaf_and_concurrency::test_use_after_free::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:17 (uaf_and_concurrency-1eea3587a88e1195+0x23ec3b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #13 <uaf_and_concurrency::test_use_after_free::{closure#0} as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x23e726) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #14 <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e6e4d) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #15 test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:724 (uaf_and_concurrency-1eea3587a88e1195+0x241eea) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #16 <test::types::RunnableTest>::run /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145 (uaf_and_concurrency-1eea3587a88e1195+0x2a5b39) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #17 test::run_test_in_process::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x248b94) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #18 <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b314) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #19 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b09ed) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #20 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #21 std::panicking::catch_unwind::<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2adb7b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #22 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29df48) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #23 test::run_test_in_process /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x24ca1e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #24 test::run_test::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:668 (uaf_and_concurrency-1eea3587a88e1195+0x249bfb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #25 test::run_test::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:698 (uaf_and_concurrency-1eea3587a88e1195+0x24a0fc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #26 std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x362001) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #27 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x272503) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #28 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b2a9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #29 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b08bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #30 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #31 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2addcb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #32 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29dec9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #33 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x271d52) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #34 <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e03e5) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #35 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #36 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Thread T3 'test_use_after_' (tid=1042185, running) created by main thread at:
+    #0 pthread_create /rustc/llvm/src/llvm-project/compiler-rt/lib/tsan/rtl/tsan_interceptors_posix.cpp:1078 (uaf_and_concurrency-1eea3587a88e1195+0x1b200a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 <std::sys::thread::unix::Thread>::new /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:98 (uaf_and_concurrency-1eea3587a88e1195+0x39e8df) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:116 (uaf_and_concurrency-1eea3587a88e1195+0x26b31b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <std::thread::builder::Builder>::spawn_unchecked::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:261 (uaf_and_concurrency-1eea3587a88e1195+0x245577) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 <std::thread::builder::Builder>::spawn::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:191 (uaf_and_concurrency-1eea3587a88e1195+0x2456cc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 test::run_test /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:698 (uaf_and_concurrency-1eea3587a88e1195+0x24e0ce) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 test::run_tests::<test::console::run_tests_console::{closure#2}> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:461 (uaf_and_concurrency-1eea3587a88e1195+0x243290) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 test::console::run_tests_console /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/console.rs:328 (uaf_and_concurrency-1eea3587a88e1195+0x319f29) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 test::test_main_inner::<test::test_main_static::{closure#0}> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:170 (uaf_and_concurrency-1eea3587a88e1195+0x24187e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 test::test_main_static /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:195 (uaf_and_concurrency-1eea3587a88e1195+0x24c2a6) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 uaf_and_concurrency::main /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:? (uaf_and_concurrency-1eea3587a88e1195+0x23e3af) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 <fn() as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x23e65e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #12 std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x23eaa1) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #13 std::rt::lang_start::<()>::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/rt.rs:206 (uaf_and_concurrency-1eea3587a88e1195+0x23e8de) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #14 <&dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:287 (uaf_and_concurrency-1eea3587a88e1195+0x4cb294) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #15 std::panicking::catch_unwind::do_call::<&dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe, i32> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x41547a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #16 __rust_try std.b71af8ea4127a278-cgu.03:? (uaf_and_concurrency-1eea3587a88e1195+0x42a778) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #17 std::panicking::catch_unwind::<i32, &dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x411253) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #18 std::panic::catch_unwind::<&dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe, i32> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x559493) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #19 std::rt::lang_start_internal::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/rt.rs:175 (uaf_and_concurrency-1eea3587a88e1195+0x416c63) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #20 std::panicking::catch_unwind::do_call::<std::rt::lang_start_internal::{closure#0}, isize> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x415334) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #21 __rust_try std.b71af8ea4127a278-cgu.03:? (uaf_and_concurrency-1eea3587a88e1195+0x42a778) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #22 std::panicking::catch_unwind::<isize, std::rt::lang_start_internal::{closure#0}> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x411001) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #23 std::panic::catch_unwind::<std::rt::lang_start_internal::{closure#0}, isize> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x559428) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #24 std::rt::lang_start_internal /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/rt.rs:171 (uaf_and_concurrency-1eea3587a88e1195+0x421d87) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #25 std::rt::lang_start::<()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/rt.rs:205 (uaf_and_concurrency-1eea3587a88e1195+0x23e878) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #26 main ??:? (uaf_and_concurrency-1eea3587a88e1195+0x23e599) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+SUMMARY: ThreadSanitizer: heap-use-after-free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/lib.rs:87 in broken_app::use_after_free
+==================
+==================
+WARNING: ThreadSanitizer: data race (pid=1042182)
+  Read of size 8 at 0x555556b4a310 by thread T4:
+    #0 broken_app::concurrency::race_increment::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 (uaf_and_concurrency-1eea3587a88e1195+0x394b11) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 std::sys::backtrace::__rust_begin_short_backtrace::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x3949e1) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x3941b3) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x392949) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x3923bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 __rust_try dgss26h56cu3lpbfzhv6bx1i0:? (uaf_and_concurrency-1eea3587a88e1195+0x3927b8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x39205b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x38e209) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x393db2) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x38d495) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Previous write of size 8 at 0x555556b4a310 by thread T2:
+    #0 broken_app::concurrency::race_increment::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 (uaf_and_concurrency-1eea3587a88e1195+0x394b70) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 std::sys::backtrace::__rust_begin_short_backtrace::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x3949e1) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x3941b3) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x392949) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x3923bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 __rust_try dgss26h56cu3lpbfzhv6bx1i0:? (uaf_and_concurrency-1eea3587a88e1195+0x3927b8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x39205b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x38e209) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x393db2) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x38d495) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Thread T4 (tid=1042187, running) created by thread T1 at:
+    #0 pthread_create /rustc/llvm/src/llvm-project/compiler-rt/lib/tsan/rtl/tsan_interceptors_posix.cpp:1078 (uaf_and_concurrency-1eea3587a88e1195+0x1b200a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 <std::sys::thread::unix::Thread>::new /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:98 (uaf_and_concurrency-1eea3587a88e1195+0x39e8df) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:116 (uaf_and_concurrency-1eea3587a88e1195+0x393947) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <std::thread::builder::Builder>::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:261 (uaf_and_concurrency-1eea3587a88e1195+0x390487) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 <std::thread::builder::Builder>::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:191 (uaf_and_concurrency-1eea3587a88e1195+0x3905dc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 std::thread::functions::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/functions.rs:131 (uaf_and_concurrency-1eea3587a88e1195+0x390313) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 broken_app::concurrency::race_increment /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:12 (uaf_and_concurrency-1eea3587a88e1195+0x38bc20) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 uaf_and_concurrency::race_increment_is_correct /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:10 (uaf_and_concurrency-1eea3587a88e1195+0x23e4c0) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 uaf_and_concurrency::race_increment_is_correct::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:9 (uaf_and_concurrency-1eea3587a88e1195+0x23ec9b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <uaf_and_concurrency::race_increment_is_correct::{closure#0} as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x23e796) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e6e4d) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:724 (uaf_and_concurrency-1eea3587a88e1195+0x241eea) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #12 <test::types::RunnableTest>::run /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145 (uaf_and_concurrency-1eea3587a88e1195+0x2a5b39) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #13 test::run_test_in_process::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x248b94) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #14 <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b314) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #15 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b09ed) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #16 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #17 std::panicking::catch_unwind::<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2adb7b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #18 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29df48) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #19 test::run_test_in_process /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x24ca1e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #20 test::run_test::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:668 (uaf_and_concurrency-1eea3587a88e1195+0x249bfb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #21 test::run_test::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:698 (uaf_and_concurrency-1eea3587a88e1195+0x24a0fc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #22 std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x362001) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #23 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x272503) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #24 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b2a9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #25 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b08bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #26 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #27 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2addcb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #28 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29dec9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #29 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x271d52) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #30 <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e03e5) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #31 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #32 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Thread T2 (tid=1042186, finished) created by thread T1 at:
+    #0 pthread_create /rustc/llvm/src/llvm-project/compiler-rt/lib/tsan/rtl/tsan_interceptors_posix.cpp:1078 (uaf_and_concurrency-1eea3587a88e1195+0x1b200a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 <std::sys::thread::unix::Thread>::new /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:98 (uaf_and_concurrency-1eea3587a88e1195+0x39e8df) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:116 (uaf_and_concurrency-1eea3587a88e1195+0x393947) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <std::thread::builder::Builder>::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:261 (uaf_and_concurrency-1eea3587a88e1195+0x390487) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 <std::thread::builder::Builder>::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:191 (uaf_and_concurrency-1eea3587a88e1195+0x3905dc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 std::thread::functions::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/functions.rs:131 (uaf_and_concurrency-1eea3587a88e1195+0x390313) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 broken_app::concurrency::race_increment /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:12 (uaf_and_concurrency-1eea3587a88e1195+0x38bc20) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 uaf_and_concurrency::race_increment_is_correct /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:10 (uaf_and_concurrency-1eea3587a88e1195+0x23e4c0) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 uaf_and_concurrency::race_increment_is_correct::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:9 (uaf_and_concurrency-1eea3587a88e1195+0x23ec9b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <uaf_and_concurrency::race_increment_is_correct::{closure#0} as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x23e796) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e6e4d) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:724 (uaf_and_concurrency-1eea3587a88e1195+0x241eea) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #12 <test::types::RunnableTest>::run /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145 (uaf_and_concurrency-1eea3587a88e1195+0x2a5b39) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #13 test::run_test_in_process::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x248b94) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #14 <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b314) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #15 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b09ed) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #16 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #17 std::panicking::catch_unwind::<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2adb7b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #18 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29df48) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #19 test::run_test_in_process /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x24ca1e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #20 test::run_test::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:668 (uaf_and_concurrency-1eea3587a88e1195+0x249bfb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #21 test::run_test::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:698 (uaf_and_concurrency-1eea3587a88e1195+0x24a0fc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #22 std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x362001) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #23 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x272503) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #24 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b2a9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #25 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b08bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #26 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #27 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2addcb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #28 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29dec9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #29 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x271d52) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #30 <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e03e5) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #31 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #32 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 in broken_app::concurrency::race_increment::{closure#0}
+==================
+test test_use_after_free ... ok
+==================
+WARNING: ThreadSanitizer: data race (pid=1042182)
+  Write of size 8 at 0x555556b4a310 by thread T5:
+    #0 broken_app::concurrency::race_increment::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 (uaf_and_concurrency-1eea3587a88e1195+0x394b70) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 std::sys::backtrace::__rust_begin_short_backtrace::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x3949e1) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x3941b3) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x392949) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x3923bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 __rust_try dgss26h56cu3lpbfzhv6bx1i0:? (uaf_and_concurrency-1eea3587a88e1195+0x3927b8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x39205b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x38e209) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x393db2) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x38d495) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Previous write of size 8 at 0x555556b4a310 by thread T4:
+    #0 broken_app::concurrency::race_increment::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 (uaf_and_concurrency-1eea3587a88e1195+0x394b70) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 std::sys::backtrace::__rust_begin_short_backtrace::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x3949e1) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x3941b3) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x392949) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x3923bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 __rust_try dgss26h56cu3lpbfzhv6bx1i0:? (uaf_and_concurrency-1eea3587a88e1195+0x3927b8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x39205b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x38e209) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x393db2) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <std::thread::lifecycle::spawn_unchecked<broken_app::concurrency::race_increment::{closure#0}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x38d495) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Thread T5 (tid=1042188, running) created by thread T1 at:
+    #0 pthread_create /rustc/llvm/src/llvm-project/compiler-rt/lib/tsan/rtl/tsan_interceptors_posix.cpp:1078 (uaf_and_concurrency-1eea3587a88e1195+0x1b200a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 <std::sys::thread::unix::Thread>::new /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:98 (uaf_and_concurrency-1eea3587a88e1195+0x39e8df) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:116 (uaf_and_concurrency-1eea3587a88e1195+0x393947) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <std::thread::builder::Builder>::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:261 (uaf_and_concurrency-1eea3587a88e1195+0x390487) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 <std::thread::builder::Builder>::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:191 (uaf_and_concurrency-1eea3587a88e1195+0x3905dc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 std::thread::functions::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/functions.rs:131 (uaf_and_concurrency-1eea3587a88e1195+0x390313) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 broken_app::concurrency::race_increment /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:12 (uaf_and_concurrency-1eea3587a88e1195+0x38bc20) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 uaf_and_concurrency::race_increment_is_correct /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:10 (uaf_and_concurrency-1eea3587a88e1195+0x23e4c0) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 uaf_and_concurrency::race_increment_is_correct::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:9 (uaf_and_concurrency-1eea3587a88e1195+0x23ec9b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <uaf_and_concurrency::race_increment_is_correct::{closure#0} as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x23e796) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e6e4d) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:724 (uaf_and_concurrency-1eea3587a88e1195+0x241eea) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #12 <test::types::RunnableTest>::run /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145 (uaf_and_concurrency-1eea3587a88e1195+0x2a5b39) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #13 test::run_test_in_process::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x248b94) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #14 <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b314) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #15 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b09ed) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #16 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #17 std::panicking::catch_unwind::<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2adb7b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #18 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29df48) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #19 test::run_test_in_process /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x24ca1e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #20 test::run_test::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:668 (uaf_and_concurrency-1eea3587a88e1195+0x249bfb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #21 test::run_test::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:698 (uaf_and_concurrency-1eea3587a88e1195+0x24a0fc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #22 std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x362001) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #23 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x272503) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #24 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b2a9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #25 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b08bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #26 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #27 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2addcb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #28 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29dec9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #29 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x271d52) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #30 <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e03e5) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #31 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #32 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+  Thread T4 (tid=1042187, finished) created by thread T1 at:
+    #0 pthread_create /rustc/llvm/src/llvm-project/compiler-rt/lib/tsan/rtl/tsan_interceptors_posix.cpp:1078 (uaf_and_concurrency-1eea3587a88e1195+0x1b200a) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #1 <std::sys::thread::unix::Thread>::new /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:98 (uaf_and_concurrency-1eea3587a88e1195+0x39e8df) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #2 std::thread::lifecycle::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:116 (uaf_and_concurrency-1eea3587a88e1195+0x393947) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #3 <std::thread::builder::Builder>::spawn_unchecked::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:261 (uaf_and_concurrency-1eea3587a88e1195+0x390487) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #4 <std::thread::builder::Builder>::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/builder.rs:191 (uaf_and_concurrency-1eea3587a88e1195+0x3905dc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #5 std::thread::functions::spawn::<broken_app::concurrency::race_increment::{closure#0}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/functions.rs:131 (uaf_and_concurrency-1eea3587a88e1195+0x390313) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #6 broken_app::concurrency::race_increment /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:12 (uaf_and_concurrency-1eea3587a88e1195+0x38bc20) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #7 uaf_and_concurrency::race_increment_is_correct /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:10 (uaf_and_concurrency-1eea3587a88e1195+0x23e4c0) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #8 uaf_and_concurrency::race_increment_is_correct::{closure#0} /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/tests/uaf_and_concurrency.rs:9 (uaf_and_concurrency-1eea3587a88e1195+0x23ec9b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #9 <uaf_and_concurrency::race_increment_is_correct::{closure#0} as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x23e796) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #10 <fn() -> core::result::Result<(), alloc::string::String> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e6e4d) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #11 test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:724 (uaf_and_concurrency-1eea3587a88e1195+0x241eea) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #12 <test::types::RunnableTest>::run /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/types.rs:145 (uaf_and_concurrency-1eea3587a88e1195+0x2a5b39) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #13 test::run_test_in_process::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x248b94) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #14 <core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b314) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #15 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b09ed) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #16 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #17 std::panicking::catch_unwind::<core::result::Result<(), alloc::string::String>, core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2adb7b) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #18 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<test::run_test_in_process::{closure#0}>, core::result::Result<(), alloc::string::String>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29df48) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #19 test::run_test_in_process /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:747 (uaf_and_concurrency-1eea3587a88e1195+0x24ca1e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #20 test::run_test::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:668 (uaf_and_concurrency-1eea3587a88e1195+0x249bfb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #21 test::run_test::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/test/src/lib.rs:698 (uaf_and_concurrency-1eea3587a88e1195+0x24a0fc) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #22 std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166 (uaf_and_concurrency-1eea3587a88e1195+0x362001) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #23 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70 (uaf_and_concurrency-1eea3587a88e1195+0x272503) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #24 <core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275 (uaf_and_concurrency-1eea3587a88e1195+0x35b2a9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #25 std::panicking::catch_unwind::do_call::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:576 (uaf_and_concurrency-1eea3587a88e1195+0x2b08bf) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #26 __rust_try test.9dce57da88290219-cgu.04:? (uaf_and_concurrency-1eea3587a88e1195+0x2bafa8) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #27 std::panicking::catch_unwind::<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:544 (uaf_and_concurrency-1eea3587a88e1195+0x2addcb) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #28 std::panic::catch_unwind::<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1}::{closure#0}>, ()> /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359 (uaf_and_concurrency-1eea3587a88e1195+0x29dec9) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #29 std::thread::lifecycle::spawn_unchecked::<test::run_test::{closure#1}, ()>::{closure#1} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68 (uaf_and_concurrency-1eea3587a88e1195+0x271d52) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #30 <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0} /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250 (uaf_and_concurrency-1eea3587a88e1195+0x2e03e5) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #31 <alloc::boxed::Box<dyn core::ops::function::FnOnce<(), Output = ()> + core::marker::Send> as core::ops::function::FnOnce<()>>::call_once /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2273 (uaf_and_concurrency-1eea3587a88e1195+0x42902e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+    #32 <std::sys::thread::unix::Thread>::new::thread_start /home/m_rakul/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/thread/unix.rs:118 (uaf_and_concurrency-1eea3587a88e1195+0x3aa83e) (BuildId: da50e637614572b0f36bf95a82c5bc941976a323)
+
+SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 in broken_app::concurrency::race_increment::{closure#0}
+==================
+test race_increment_is_correct ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.36s
+
+ThreadSanitizer: reported 3 warnings
+error: test failed, to rerun pass `--test uaf_and_concurrency`
+
+Caused by:
+  process didn't exit successfully: `/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-1eea3587a88e1195` (exit status: 66)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.
+
+Комментарий:
+Тоже показал и ошибку use-after-free (код до исправления)
+SUMMARY: ThreadSanitizer: heap-use-after-free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/lib.rs:87 in broken_app::use_after_free
+
+И Data Race:

@@ -1,5 +1,8 @@
 [Неотформатированная версия]
 
+В корне проекта находится исходный broken-app (и исправленный впоследствии).
+В backup/reference-app - "правильный" app, для сборки и запуска зайти туда: cargo build, cargo run, cargo test. 
+
 ПОИСК ОШИБОК: тесты, Miri, Valgrind, ASAN, TSAN 
 
 >>> Шаг 1, начальное состояние, запуск тестов
@@ -238,7 +241,7 @@ regression_miri_valgrind.txt
 а Miri, Valgrind и ASAN/TSAN приведу уже окончательный для всех тестов. 
 
 И опишу результаты здеcь:
-uaf_and_concurrency_before.txt
+uaf_and_concurrency_before.txt  - после прогона комментарии об обнаруженной ошибке
 uaf_and_concurrency_after.txt
 
 Примечание: для TSAN надо пересобрать core, alloc, и std thread sanitizer'ом, нужен флажок -Zbuild-std flag:
@@ -248,3 +251,7 @@ TSAN:
 
 ASAN:
 > RUSTFLAGS="-Z sanitizer=address" cargo +nightly test --test uaf_and_concurrency --target x86_64-unknown-linux-gnu
+
+Если коротко, TSAN проанализировал и показал и use-after-free, и Data Race:
+SUMMARY: ThreadSanitizer: heap-use-after-free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/lib.rs:87 in broken_app::use_after_free
+SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 in broken_app::concurrency::race_increment::{closure#0}
