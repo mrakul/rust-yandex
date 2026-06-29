@@ -258,5 +258,11 @@ SUMMARY: ThreadSanitizer: heap-use-after-free /home/m_rakul/Code/rust-yandex/pra
 SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 in broken_app::concurrency::race_increment::{closure#0}
 (commit 5e17a8a2ac498fb8e8665289f0df84820e81d1b9)
 
-Исправление и результаты прогона тестов:
-uaf_and_concurrency_after.txt
+Исправление и результаты прогона тестов: uaf_and_concurrency_after.txt
+(commit 0865b2f879caf16047fb0141bad9e0f4e4d02d0c)
+
+>>> Конечные прогоны по всем тестам всех инструментов выложены здесь:
+./artifacts/artifacts/all_analysys_after.txt
+
+
+>>>> Профилирование и оптимизация TODO <<<<s
