@@ -1,5 +1,7 @@
 [Неотформатированная версия]
 
+ПОИСК ОШИБОК: тесты, Miri, Valgrind, ASAN, TSAN 
+
 >>> Шаг 1, начальное состояние, запуск тестов
 
 - broken-app, cargo check:
@@ -225,3 +227,24 @@ warning: `broken-app` (lib test) generated 3 warnings (3 duplicates)
 >>> По найденным ошибкам добавлены регрессионные тесты: regression.rs
 Добавлены артефакты с прогоном Miri и Valgrind:
 regression_miri_valgrind.txt
+
+(!) Дальше заметил, что часть кода не вызывается в broken-app - из важных - код из сoncurrent.rs (гонка) и use_after_free() из lib.rs.
+(по правде сказать, не совсем понимаю смысл - необходимо сравнение с "опорным" кодом и проверка,
+что упущено, чтобы довнести ошибки в broken-app и потом их поправить?)
+
+Так или иначе, я вынес два теста для отдельных запусков в tests/uaf_and_concurrency.rsю
+
+Для анализа этих двух ошибок использую ASAN и TSAN (запуск только для добавленных тество с uaf и многопоточностью),
+а Miri, Valgrind и ASAN/TSAN приведу уже окончательный для всех тестов. 
+
+И опишу результаты здеcь:
+uaf_and_concurrency_before.txt
+uaf_and_concurrency_after.txt
+
+Примечание: для TSAN надо пересобрать core, alloc, и std thread sanitizer'ом, нужен флажок -Zbuild-std flag:
+TSAN:
+> RUSTFLAGS="-Z sanitizer=thread" cargo +nightly test --test uaf_and_concurrency -Zbuild-std --target x86_64-unknown-linux-gnu
+Вроде бы, будет переосбрано только для nightly.
+
+ASAN:
+> RUSTFLAGS="-Z sanitizer=address" cargo +nightly test --test uaf_and_concurrency --target x86_64-unknown-linux-gnu
