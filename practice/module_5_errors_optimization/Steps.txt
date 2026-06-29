@@ -235,7 +235,8 @@ regression_miri_valgrind.txt
 (по правде сказать, не совсем понимаю смысл - необходимо сравнение с "опорным" кодом и проверка,
 что упущено, чтобы довнести ошибки в broken-app и потом их поправить?)
 
-Так или иначе, я вынес два теста для отдельных запусков в tests/uaf_and_concurrency.rsю
+Так или иначе, я вынес два теста для отдельных запусков в tests/uaf_and_concurrency.rs
+(commit 5e4097493caa3a7febbce00a8a3dabd256c6c0bb)
 
 Для анализа этих двух ошибок использую ASAN и TSAN (запуск только для добавленных тество с uaf и многопоточностью),
 а Miri, Valgrind и ASAN/TSAN приведу уже окончательный для всех тестов. 
@@ -255,3 +256,7 @@ ASAN:
 Если коротко, TSAN проанализировал и показал и use-after-free, и Data Race:
 SUMMARY: ThreadSanitizer: heap-use-after-free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/lib.rs:87 in broken_app::use_after_free
 SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 in broken_app::concurrency::race_increment::{closure#0}
+(commit 5e17a8a2ac498fb8e8665289f0df84820e81d1b9)
+
+Исправление и результаты прогона тестов:
+uaf_and_concurrency_after.txt

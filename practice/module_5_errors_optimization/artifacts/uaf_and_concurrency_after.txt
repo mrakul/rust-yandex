@@ -1,0 +1,64 @@
+Тесты отдельно, ASAN, TSAN => Warning'и, Error'ы устранены
+
+Тесты:
+> m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ cargo test --test uaf_and_concurrency
+warning: failed to auto-clean cache data
+
+failed to clean entries from the global cache
+
+Caused by:
+  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
+
+Caused by:
+  Permission denied (os error 13)
+   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.84s
+     Running tests/uaf_and_concurrency.rs (target/debug/deps/uaf_and_concurrency-82f925417e6becbd)
+
+running 2 tests
+test test_use_after_free ... ok
+test race_increment_is_correct ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+ASAN:
+> m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=address" cargo +nightly test --test uaf_and_concurrency --target x86_64-unknown-linux-gnu
+warning: failed to auto-clean cache data
+
+failed to clean entries from the global cache
+
+Caused by:
+  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
+
+Caused by:
+  Permission denied (os error 13)
+   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.83s
+     Running tests/uaf_and_concurrency.rs (target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-6942b1d6c2a87d71)
+
+running 2 tests
+test test_use_after_free ... ok
+test race_increment_is_correct ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+TSAN:
+> m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=thread" cargo +nightly test --test uaf_and_concurrency -Zbuild-std --target x86_64-unknown-linux-gnu
+warning: failed to auto-clean cache data
+
+failed to clean entries from the global cache
+
+Caused by:
+  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
+
+Caused by:
+  Permission denied (os error 13)
+   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.06s
+     Running tests/uaf_and_concurrency.rs (target/x86_64-unknown-linux-gnu/debug/deps/uaf_and_concurrency-1eea3587a88e1195)
+
+running 2 tests
+test test_use_after_free ... ok
+test race_increment_is_correct ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
