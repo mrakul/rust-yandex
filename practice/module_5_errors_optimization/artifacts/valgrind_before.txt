@@ -1,0 +1,100 @@
+Команды:
+# Собрать тесты релизно
+> cargo test --no-run --release
+
+warning: `broken-app` (lib test) generated 3 warnings (3 duplicates)
+    Finished `release` profile [optimized] target(s) in 36.43s
+  Executable unittests src/lib.rs (target/release/deps/broken_app-da4dff30a8b84508)
+  Executable unittests src/bin/demo.rs (target/release/deps/demo-4e6076337a466a98)
+  Executable tests/integration.rs (target/release/deps/integration-c3863f0a9bd8a6d6)
+
+>> ПУСК #1:
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ valgrind --leak-check=full --show-leak-kinds=all target/release/deps/integration-c3863f0a9bd8a6d6
+
+==771132== Memcheck, a memory error detector
+==771132== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==771132== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==771132== Command: target/release/deps/integration-c3863f0a9bd8a6d6
+==771132== 
+
+running 6 tests
+test averages_only_positive ... ok
+test normalize_simple ... ok
+test fib_small_numbers ... ok
+test dedup_preserves_uniques ... ok
+test sums_even_numbers ... ok
+test counts_non_zero_bytes ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+==771132== 
+==771132== HEAP SUMMARY:
+==771132==     in use at exit: 549 bytes in 2 blocks
+==771132==   total heap usage: 780 allocs, 778 frees, 89,976 bytes allocated
+==771132== 
+==771132== 5 bytes in 1 blocks are definitely lost in loss record 1 of 2
+==771132==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==771132==    by 0x17C513: broken_app::leak_buffer (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x13D5E1: core::ops::function::FnOnce::call_once (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x15C45A: test::__rust_begin_short_backtrace (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x16FDE9: test::run_test::{{closure}} (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x14A083: std::sys::backtrace::__rust_begin_short_backtrace (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x14D9B1: core::ops::function::FnOnce::call_once{{vtable.shim}} (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x19026E: std::sys::thread::unix::Thread::new::thread_start (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x4931AA3: start_thread (pthread_create.c:447)
+==771132==    by 0x49BEA63: clone (clone.S:100)
+==771132== 
+==771132== 544 bytes in 1 blocks are still reachable in loss record 2 of 2
+==771132==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==771132==    by 0x18CE8C: std::sys::pal::unix::stack_overflow::thread_info::set_current_info (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x18AA2E: std::rt::lang_start_internal (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132==    by 0x13D704: main (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==771132== 
+==771132== LEAK SUMMARY:
+==771132==    definitely lost: 5 bytes in 1 blocks
+==771132==    indirectly lost: 0 bytes in 0 blocks
+==771132==      possibly lost: 0 bytes in 0 blocks
+==771132==    still reachable: 544 bytes in 1 blocks
+==771132==         suppressed: 0 bytes in 0 blocks
+==771132== 
+==771132== For lists of detected and suppressed errors, rerun with: -s
+==771132== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
+
+Пуск #2 после правки:
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ valgrind --leak-check=full --show-leak-kinds=all target/release/deps/integration-c3863f0a9bd8a6d6
+==780047== Memcheck, a memory error detector
+==780047== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==780047== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==780047== Command: target/release/deps/integration-c3863f0a9bd8a6d6
+==780047== 
+
+running 6 tests
+test counts_non_zero_bytes ... ok
+test dedup_preserves_uniques ... ok
+test sums_even_numbers ... ok
+test normalize_simple ... ok
+test averages_only_positive ... ok
+test fib_small_numbers ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+==780047== 
+==780047== HEAP SUMMARY:
+==780047==     in use at exit: 544 bytes in 1 blocks
+==780047==   total heap usage: 780 allocs, 779 frees, 89,976 bytes allocated
+==780047== 
+==780047== 544 bytes in 1 blocks are still reachable in loss record 1 of 1
+==780047==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==780047==    by 0x18CEAC: std::sys::pal::unix::stack_overflow::thread_info::set_current_info (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==780047==    by 0x18AA4E: std::rt::lang_start_internal (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==780047==    by 0x13D6F4: main (in /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/target/release/deps/integration-c3863f0a9bd8a6d6)
+==780047== 
+==780047== LEAK SUMMARY:
+==780047==    definitely lost: 0 bytes in 0 blocks
+==780047==    indirectly lost: 0 bytes in 0 blocks
+==780047==      possibly lost: 0 bytes in 0 blocks
+==780047==    still reachable: 544 bytes in 1 blocks
+==780047==         suppressed: 0 bytes in 0 blocks
+==780047== 
+==780047== For lists of detected and suppressed errors, rerun with: -s
+==780047== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)

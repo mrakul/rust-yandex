@@ -196,3 +196,27 @@ Program received signal SIGABRT, Aborted.
 __pthread_kill_implementation (no_tid=0, signo=6, threadid=<optimized out>) at ./nptl/pthread_kill.c:44
 warning: 44     ./nptl/pthread_kill.c: No such file or directory
 (gdb) 
+
+
+>>> Miri
+> cargo +nightly miri test
+
+Вывод в artifacts/miri_before.txt:
+- сумма чётных sum_even => использование итератора, секция unsafe удалена за ненадобностью
+- Логическая ошибка (нашлась бы без Miri по assert_eq) - в average_positive деление на весь массив => поделил на только количество чётных
+
+>>> Valgrind
+
+# Собрать тесты релизно
+> cargo test --no-run --release
+
+warning: `broken-app` (lib test) generated 3 warnings (3 duplicates)
+    Finished `release` profile [optimized] target(s) in 36.43s
+  Executable unittests src/lib.rs (target/release/deps/broken_app-da4dff30a8b84508)
+  Executable unittests src/bin/demo.rs (target/release/deps/demo-4e6076337a466a98)
+  Executable tests/integration.rs (target/release/deps/integration-c3863f0a9bd8a6d6)
+
+> valgrind --leak-check=full --show-leak-kinds=all target/release/deps/integration-c3863f0a9bd8a6d6
+
+Вывод в artifacts/valgrind_before.txt
+- По Valgrind: утечка памяти в leak_buffer => добавлено освобождение
