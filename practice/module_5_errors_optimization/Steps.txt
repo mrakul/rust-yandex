@@ -202,7 +202,7 @@ warning: 44     ./nptl/pthread_kill.c: No such file or directory
 > cargo +nightly miri test
 
 Вывод в artifacts/miri_before.txt:
-- сумма чётных sum_even => использование итератора, секция unsafe удалена за ненадобностью
+- Сумма чётных sum_even => использование итератора, секция unsafe удалена за ненадобностью
 - Логическая ошибка (нашлась бы без Miri по assert_eq) - в average_positive деление на весь массив => поделил на только количество чётных
 
 >>> Valgrind
@@ -217,6 +217,11 @@ warning: `broken-app` (lib test) generated 3 warnings (3 duplicates)
   Executable tests/integration.rs (target/release/deps/integration-c3863f0a9bd8a6d6)
 
 > valgrind --leak-check=full --show-leak-kinds=all target/release/deps/integration-c3863f0a9bd8a6d6
+Вызываю тесты, можно вызывать demo, тоже это проверил.
 
 Вывод в artifacts/valgrind_before.txt
 - По Valgrind: утечка памяти в leak_buffer => добавлено освобождение
+
+>>> По найденным ошибкам добавлены регрессионные тесты: regression.rs
+Добавлены артефакты с прогоном Miri и Valgrind:
+regression_miri_valgrind.txt
