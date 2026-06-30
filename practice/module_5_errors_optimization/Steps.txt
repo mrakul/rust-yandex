@@ -210,6 +210,13 @@ warning: 44     ./nptl/pthread_kill.c: No such file or directory
 - Сумма чётных sum_even => использование итератора, секция unsafe удалена за ненадобностью
 - Логическая ошибка (нашлась бы без Miri по assert_eq) - в average_positive деление на весь массив => поделил на только количество чётных
 
+Вывод пусков поэтапно до устранения ошибок с указанием ошибки.
+(commit ea0210a2501ec97e83bc5df1b667693fb107eb91)
+
+Полные успешные выводы по всем инструментам будут отражены в файле:
+artifacts/all_analysys_after.txt
+
+
 >>> Valgrind
 
 # Собрать тесты релизно
@@ -226,11 +233,16 @@ warning: `broken-app` (lib test) generated 3 warnings (3 duplicates)
 
 Вывод в artifacts/valgrind_before.txt
 - По Valgrind: утечка памяти в leak_buffer => добавлено освобождение
+(commit ea0210a2501ec97e83bc5df1b667693fb107eb91)
 
->>> По найденным ошибкам добавлены регрессионные тесты: regression.rs
-Добавлены артефакты с прогоном Miri и Valgrind:
-regression_miri_valgrind.txt
+Вывод пусков поэтапно до устранения ошибок с указанием ошибки.
+Полные успешные выводы по всем инструментам будут отражены в файле:
+artifacts/all_analysys_after.txt
 
+>>> По найденным ошибкам: 
+- Добавлены регрессионные тесты: regression.rs
+- Добавлены артефакты с прогоном Miri и Valgrind: regression_miri_valgrind.txt
+(commit c16e4b01c31b7351801b3db8664e4425a43c8665)
 (!) Дальше заметил, что часть кода не вызывается в broken-app - из важных - код из сoncurrent.rs (гонка) и use_after_free() из lib.rs.
 (по правде сказать, не совсем понимаю смысл - необходимо сравнение с "опорным" кодом и проверка,
 что упущено, чтобы довнести ошибки в broken-app и потом их поправить?)
@@ -259,10 +271,11 @@ SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/modu
 (commit 5e17a8a2ac498fb8e8665289f0df84820e81d1b9)
 
 Исправление и результаты прогона тестов: uaf_and_concurrency_after.txt
-(commit 0865b2f879caf16047fb0141bad9e0f4e4d02d0c)
+(commit f0ef2674bea8ae37e5130d83bd568665a4d0b8f0)
 
 >>> Конечные прогоны по всем тестам всех инструментов выложены здесь:
 ./artifacts/artifacts/all_analysys_after.txt
+(commit d08e334dc1859cff4e7bb808fa3498322bb28c6f)
 
 
 >>>> Профилирование и оптимизация TODO <<<<s
