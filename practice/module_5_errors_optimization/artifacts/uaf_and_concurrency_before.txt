@@ -562,3 +562,4 @@ note: test exited abnormally; to see the full output pass --no-capture to the ha
 SUMMARY: ThreadSanitizer: heap-use-after-free /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/lib.rs:87 in broken_app::use_after_free
 
 И Data Race:
+SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization/src/concurrency.rs:15 in broken_app::concurrency::race_increment::{closure#0}
