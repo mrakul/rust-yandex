@@ -128,6 +128,7 @@ __pthread_kill_implementation (no_tid=0, signo=6, threadid=<optimized out>) at .
 warning: 44     ./nptl/pthread_kill.c: No such file or directory
 
 Полный вывод перемещён в файлик artifacts/gdb_output.txt
+(commit c60206e1f5af70a7152d6ad681e253dbfb0dce91)
 
 >>> Miri
 > cargo +nightly miri test
@@ -204,4 +205,17 @@ SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/modu
 (commit d08e334dc1859cff4e7bb808fa3498322bb28c6f)
 
 
->>>> Профилирование и оптимизация TODO <<<<s
+>>>> Профилирование и оптимизация <<<<
+0. demo.rs немного модифицировал (commit 42d1a18759aa67a264a0b7b64ea7dd766910512b):
+- Сделал цикл, чтобы время выполнения было 3-5 секунд, и при этом сохранились пропорции в стеке-snapshot'е, снимаемом perf'ом
+- Обернул вызовы в black_box, чтобы не соптимизировались
+- Убрал println'ы. Можно оставить, но я убрал :)    
+- Входные данные те же
+
+Вывод:
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ time ./target/release/demo
+Конец обработки
+
+real    0m4.615s
+user    0m4.534s
+sys     0m0.006s

@@ -11,3 +11,7 @@ criterion = "0.5"
 [[bench]]
 name = "baseline"
 harness = false
+
+# Релизная сборка для perf'а/flamegraph с символами
+[profile.release]
+debug = 1
