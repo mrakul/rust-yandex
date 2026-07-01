@@ -1,0 +1,397 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 4K of event 'task-clock:uppp'
+# Event count (approx.): 4696696692
+#
+# Children      Self  Command  Shared Object  Symbol                                                            
+# ........  ........  .......  .............  ..................................................................
+#
+   100.00%     0.00%  demo     demo           [.] _start
+            |
+            ---_start
+               __libc_start_main@@GLIBC_2.34
+               __libc_start_call_main
+               main
+               std::rt::lang_start_internal
+               std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                     |          
+                                      --98.59%--broken_app::algo::slow_fib
+                                                |          
+                                                 --98.47%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --97.76%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --95.23%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --91.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --84.29%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --75.75%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --59.97%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --50.23%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                    |          
+                                                                                                                                                                                     --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                               |          
+                                                                                                                                                                                                --1.53%--broken_app::algo::slow_fib
+
+   100.00%     0.00%  demo     libc.so.6      [.] __libc_start_main@@GLIBC_2.34
+            |
+            ---__libc_start_main@@GLIBC_2.34
+               __libc_start_call_main
+               main
+               std::rt::lang_start_internal
+               std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                     |          
+                                      --98.59%--broken_app::algo::slow_fib
+                                                |          
+                                                 --98.47%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --97.76%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --95.23%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --91.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --84.29%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --75.75%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --59.97%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --50.23%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                    |          
+                                                                                                                                                                                     --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                               |          
+                                                                                                                                                                                                --1.53%--broken_app::algo::slow_fib
+
+   100.00%     0.00%  demo     libc.so.6      [.] __libc_start_call_main
+            |
+            ---__libc_start_call_main
+               main
+               std::rt::lang_start_internal
+               std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                     |          
+                                      --98.59%--broken_app::algo::slow_fib
+                                                |          
+                                                 --98.47%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --97.76%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --95.23%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --91.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --84.29%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --75.75%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --59.97%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --50.23%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                    |          
+                                                                                                                                                                                     --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                               |          
+                                                                                                                                                                                                --1.53%--broken_app::algo::slow_fib
+
+   100.00%     0.00%  demo     demo           [.] main
+            |
+            ---main
+               std::rt::lang_start_internal
+               std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                     |          
+                                      --98.59%--broken_app::algo::slow_fib
+                                                |          
+                                                 --98.47%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --97.76%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --95.23%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --91.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --84.29%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --75.75%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --59.97%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --50.23%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                    |          
+                                                                                                                                                                                     --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                               |          
+                                                                                                                                                                                                --1.53%--broken_app::algo::slow_fib
+
+   100.00%     0.00%  demo     demo           [.] std::rt::lang_start_internal
+            |
+            ---std::rt::lang_start_internal
+               std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                     |          
+                                      --98.59%--broken_app::algo::slow_fib
+                                                |          
+                                                 --98.47%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --97.76%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --95.23%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --91.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --84.29%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --75.75%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --59.97%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --50.23%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                    |          
+                                                                                                                                                                                     --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                               |          
+                                                                                                                                                                                                --1.53%--broken_app::algo::slow_fib
+
+   100.00%     0.00%  demo     demo           [.] std::rt::lang_start::{{closure}}
+            |
+            ---std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                     |          
+                                      --98.59%--broken_app::algo::slow_fib
+                                                |          
+                                                 --98.47%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --97.76%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --95.23%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --91.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --84.29%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --75.75%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --59.97%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --50.23%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                    |          
+                                                                                                                                                                                     --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                               |          
+                                                                                                                                                                                                --1.53%--broken_app::algo::slow_fib
+
+   100.00%     0.00%  demo     demo           [.] std::sys::backtrace::__rust_begin_short_backtrace
+            |
+            ---std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                     |          
+                                      --98.59%--broken_app::algo::slow_fib
+                                                |          
+                                                 --98.47%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --97.76%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --95.23%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --91.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --84.29%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --75.75%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --59.97%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --50.23%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                    |          
+                                                                                                                                                                                     --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                               |          
+                                                                                                                                                                                                --1.53%--broken_app::algo::slow_fib
+
+    99.96%     0.19%  demo     demo           [.] demo::main
+            |          
+             --99.77%--demo::main
+                       |          
+                        --98.72%--broken_app::algo::slow_fib
+                                  |          
+                                   --98.59%--broken_app::algo::slow_fib
+                                             |          
+                                              --98.47%--broken_app::algo::slow_fib
+                                                        |          
+                                                         --97.76%--broken_app::algo::slow_fib
+                                                                   |          
+                                                                    --95.23%--broken_app::algo::slow_fib
+                                                                              |          
+                                                                               --91.75%--broken_app::algo::slow_fib
+                                                                                         |          
+                                                                                          --84.29%--broken_app::algo::slow_fib
+                                                                                                    |          
+                                                                                                     --75.75%--broken_app::algo::slow_fib
+                                                                                                               |          
+                                                                                                                --59.97%--broken_app::algo::slow_fib
+                                                                                                                          |          
+                                                                                                                           --50.23%--broken_app::algo::slow_fib
+                                                                                                                                     |          
+                                                                                                                                      --31.91%--broken_app::algo::slow_fib
+                                                                                                                                                |          
+                                                                                                                                                 --22.98%--broken_app::algo::slow_fib
+                                                                                                                                                           |          
+                                                                                                                                                            --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                                      |          
+                                                                                                                                                                       --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                                                 |          
+                                                                                                                                                                                  --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                                            |          
+                                                                                                                                                                                             --1.53%--broken_app::algo::slow_fib
+
+    98.72%    98.72%  demo     demo           [.] broken_app::algo::slow_fib
+            |
+            ---_start
+               __libc_start_main@@GLIBC_2.34
+               __libc_start_call_main
+               main
+               std::rt::lang_start_internal
+               std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               demo::main
+               broken_app::algo::slow_fib
+               |          
+                --98.59%--broken_app::algo::slow_fib
+                          |          
+                           --98.47%--broken_app::algo::slow_fib
+                                     |          
+                                      --97.76%--broken_app::algo::slow_fib
+                                                |          
+                                                 --95.23%--broken_app::algo::slow_fib
+                                                           |          
+                                                            --91.75%--broken_app::algo::slow_fib
+                                                                      |          
+                                                                       --84.29%--broken_app::algo::slow_fib
+                                                                                 |          
+                                                                                  --75.75%--broken_app::algo::slow_fib
+                                                                                            |          
+                                                                                             --59.97%--broken_app::algo::slow_fib
+                                                                                                       |          
+                                                                                                        --50.23%--broken_app::algo::slow_fib
+                                                                                                                  |          
+                                                                                                                   --31.91%--broken_app::algo::slow_fib
+                                                                                                                             |          
+                                                                                                                              --22.98%--broken_app::algo::slow_fib
+                                                                                                                                        |          
+                                                                                                                                         --10.89%--broken_app::algo::slow_fib
+                                                                                                                                                   |          
+                                                                                                                                                    --7.82%--broken_app::algo::slow_fib
+                                                                                                                                                              |          
+                                                                                                                                                               --2.81%--broken_app::algo::slow_fib
+                                                                                                                                                                         |          
+                                                                                                                                                                          --1.53%--broken_app::algo::slow_fib
+
+     0.43%     0.09%  demo     demo           [.] broken_app::normalize
+     0.34%     0.21%  demo     demo           [.] broken_app::algo::slow_dedup
+     0.23%     0.11%  demo     demo           [.] alloc::raw_vec::RawVecInner<A>::finish_grow
+     0.17%     0.15%  demo     demo           [.] alloc::str::<impl str>::to_lowercase
+     0.15%     0.04%  demo     demo           [.] alloc::raw_vec::RawVec<T,A>::grow_one
+     0.13%     0.13%  demo     libc.so.6      [.] malloc
+     0.13%     0.02%  demo     demo           [.] alloc::raw_vec::RawVecInner<A>::reserve::do_reserve_and_handle
+     0.13%     0.02%  demo     libc.so.6      [.] cfree@GLIBC_2.2.5
+     0.11%     0.11%  demo     libc.so.6      [.] _int_free
+     0.09%     0.09%  demo     libc.so.6      [.] __memmove_avx_unaligned_erms
+     0.02%     0.02%  demo     libc.so.6      [.] realloc
+     0.02%     0.02%  demo     demo           [.] __rustc::__rust_realloc
+     0.02%     0.02%  demo     demo           [.] __rustc::__rust_alloc
+     0.02%     0.02%  demo     demo           [.] __rustc::__rust_no_alloc_shim_is_unstable_v2
+     0.02%     0.02%  demo     demo           [.] __rustc::__rust_dealloc
+     0.02%     0.02%  demo     demo           [.] broken_app::sum_even
+
+
+#
+# (Tip: To record every process run by a user: perf record -u <user>)
+#

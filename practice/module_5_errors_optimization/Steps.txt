@@ -206,10 +206,10 @@ SUMMARY: ThreadSanitizer: data race /home/m_rakul/Code/rust-yandex/practice/modu
 
 
 >>>> Профилирование и оптимизация <<<<
-0. demo.rs немного модифицировал (commit 42d1a18759aa67a264a0b7b64ea7dd766910512b):
+0. demo.rs немного модифицировал (commit e9f195f):
 - Сделал цикл, чтобы время выполнения было 3-5 секунд, и при этом сохранились пропорции в стеке-snapshot'е, снимаемом perf'ом
 - Обернул вызовы в black_box, чтобы не соптимизировались
-- Убрал println'ы. Можно оставить, но я убрал :)    
+- Убрал println'ы. Можно оставить, но я убрал :)
 - Входные данные те же
 
 Вывод:
@@ -219,3 +219,47 @@ m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ time ./
 real    0m4.615s
 user    0m4.534s
 sys     0m0.006s
+
+1. Что-то немного развалилось просто cargo flamegraph --bin demo, подкрутил, force-frame-pointers, как в советах теории:
+
+Команды:
+
+Доустановка для flamegraph:
+> cargo install inferno
+
+Сборка релиза:
+> RUSTFLAGS="-C force-frame-pointers=yes" cargo build --release
+
+Профилирование => perf.data:
+perf record -F 999 -g --call-graph fp ./target/release/demo
+
+    Конец обработки
+    [ perf record: Woken up 4 times to write data ]
+    [ perf record: Captured and wrote 0.861 MB perf.data (4635 samples) ]
+
+В текстовый вид:
+perf report > perf_report.txt
+
+flamegraph:
+perf script | inferno-collapse-perf | inferno-flamegraph > flamegraph.svg
+
+2. Шаги оптимизации
+Шаг 1. Начальное состояние:
+Артефакты выложены сюда: artifacts/optimization_initial/
+
+
+
+TODO:
+- Анализ
+- Поместить артефакты в optimization_initial
+- Бенчмарк Фибоначчи
+- Правка Фибоначчи
+- Бенчмарк Фибоначчи
+
+- Артефакты optimization_step_1
+- Наверх должна выплыть dedup с O(n^2)
+- Бенчмарк дедуплицирования, slow_dedup
+- Правка slow_dedup
+- Бенчмарк slow_dedup
+
+- Артефакты optimization_final
