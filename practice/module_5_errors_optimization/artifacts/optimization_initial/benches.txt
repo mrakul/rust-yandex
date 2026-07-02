@@ -1,0 +1,11 @@
+m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ cargo bench --bench criterion
+    Finished `bench` profile [optimized + debuginfo] target(s) in 0.07s
+     Running benches/criterion.rs (target/release/deps/criterion-7a67c3469ccdf717)
+sum_even_broken         time:   [20.069 µs 21.148 µs 22.377 µs]
+
+slow_fib_broken         time:   [6.2404 ms 6.3672 ms 6.5124 ms]
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+slow_dedup_broken       time:   [17.812 ms 18.728 ms 19.633 ms]

@@ -270,6 +270,7 @@ perf script | inferno-collapse-perf | inferno-flamegraph > flamegraph.svg
 Поэтому заметка: на этом этапе просто пришлось обновить компилятор, только это помогло.
 Но бенчмарки буду снимать на одной и той же версии компилятора.
 Думаю, картина perf/flamegraph одинакова на обеих версиях.
+(commit 98b1d12acdec1c3130897a2988ce9a05137c688b)
 
 Привожу на всякий случай - обновился с 1.93 до 1.96.1, nightly так и осталась 1.98.0:
 > rustup update
@@ -287,13 +288,12 @@ failed to clean entries from the global cache
 ..."
 
 Я удалю их из вывода логов (к делу не относятся, теперь всё чисто).
-()
 
+Бенчмарки до оптимизации (использую criterion.rs, baseline.rs не использую, поменял в Cargo.toml):
+artifacts/optimization_initial/benches.txt
 
-TODO:
-Бенчмарк slow_fib (использую criterion.rs, baseline.rs не использую, поменял в Cargo.toml):
->
-
+Вывод по Фибоначчи:
+slow_fib_broken         time:   [6.2404 ms 6.3672 ms 6.5124 ms]
 
 
 TODO:
