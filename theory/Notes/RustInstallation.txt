@@ -42,3 +42,53 @@ Current installation options:
 2) Customize installation
 3) Cancel installation
 >
+
+
+Обновление => так обновит обе версии, и stable, и nighlty (если были):
+
+m_rakul@NB1729:~/Code/rust-yandex/theory/module_5_debug_profiling/topic_2_optimization/lesson_2_optimization_stages/criterion-example$ rustup update
+info: syncing channel updates for stable-x86_64-unknown-linux-gnu
+info: latest update on 2026-06-30 for version 1.96.1 (31fca3adb 2026-06-26)
+info: removing previous version of component llvm-tools
+info: removing previous version of component rust-std for target wasm32-unknown-unknown
+info: removing previous version of component rust-src
+info: removing previous version of component cargo
+info: removing previous version of component clippy
+info: removing previous version of component rust-docs
+info: removing previous version of component rust-std
+info: removing previous version of component rustc
+info: removing previous version of component rustfmt
+info: downloading 9 components
+   llvm-tools installed                       37.35 MiB
+     rust-std installed                       20.65 MiB
+     rust-src installed                        3.69 MiB
+        cargo installed                       10.64 MiB
+       clippy installed                        4.58 MiB
+    rust-docs installed                       21.35 MiB
+     rust-std installed                       28.37 MiB
+        rustc installed                       76.50 MiB
+      rustfmt installed                        2.07 MiB                                                                      info: syncing channel updates for nightly-x86_64-unknown-linux-gnu
+info: latest update on 2026-07-01 for version 1.98.0-nightly (f46ec5218 2026-06-30)
+info: removing previous version of component rust-src
+info: removing previous version of component cargo
+info: removing previous version of component clippy
+info: removing previous version of component miri
+info: removing previous version of component rust-docs
+info: removing previous version of component rust-std
+info: removing previous version of component rustc
+info: removing previous version of component rustfmt
+info: downloading 8 components
+     rust-src installed                        5.47 MiB
+        cargo installed                       10.65 MiB
+       clippy installed                        4.42 MiB
+         miri installed                        3.50 MiB
+    rust-docs installed                       22.98 MiB
+     rust-std installed                       29.20 MiB
+        rustc installed                       75.91 MiB
+      rustfmt installed                        2.06 MiB                                                                           
+   stable-x86_64-unknown-linux-gnu updated - rustc 1.96.1 (31fca3adb 2026-06-26) (from rustc 1.93.0 (254b59607 2026-01-19))
+  nightly-x86_64-unknown-linux-gnu updated - rustc 1.98.0-nightly (f46ec5218 2026-06-30) (from rustc 1.98.0-nightly (ce9954c0c 2026-06-26))
+
+info: checking for self-update (current version: 1.29.0)
+info: cleaning up downloads & tmp directories
+m_rakul@NB1729:~/Code/rust-yandex/theory/module_5_debug_profiling/topic_2_optimization/lesson_2_optimization_stages/criterion-example$ 

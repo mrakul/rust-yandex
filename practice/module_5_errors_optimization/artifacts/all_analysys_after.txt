@@ -1,16 +1,6 @@
 >>> Тесты отдельно
 
 > m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ cargo test
-warning: failed to auto-clean cache data
-
-failed to clean entries from the global cache
-
-Caused by:
-  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
-
-Caused by:
-  Permission denied (os error 13)
-   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.92s
      Running unittests src/lib.rs (target/debug/deps/broken_app-1fcfe3268fbb11df)
 
@@ -62,16 +52,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 >>> Miri
 
 > m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ cargo +nightly miri test
-warning: failed to auto-clean cache data
-
-failed to clean entries from the global cache
-
-Caused by:
-  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
-
-Caused by:
-  Permission denied (os error 13)
-   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.73s
      Running unittests src/lib.rs (target/miri/x86_64-unknown-linux-gnu/debug/deps/broken_app-8710f211e5fc635a)
 
@@ -228,16 +208,6 @@ test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 > m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=address" cargo +nightly test --targe
 t x86_64-unknown-linux-gnu
-warning: failed to auto-clean cache data
-
-failed to clean entries from the global cache
-
-Caused by:
-  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
-
-Caused by:
-  Permission denied (os error 13)
-   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.67s
      Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/deps/broken_app-a430df7c7affa489)
 
@@ -291,15 +261,6 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 (!) Надо добавить --tests, а то после прохождения тестов ошибка, связанная с rustdoc (хотя тесты проходят).
 
 > m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=thread" cargo +nightly test --tests -Zbuild-std --target x86_64-unknown-linux-gnu
-warning: failed to auto-clean cache data
-
-failed to clean entries from the global cache
-
-Caused by:
-  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
-
-Caused by:
-  Permission denied (os error 13)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.31s
      Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/deps/broken_app-9581bc189f4ec865)
 

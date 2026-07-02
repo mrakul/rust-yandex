@@ -3,15 +3,6 @@
 
 ПУСК #1 => UB на sums_even_numbers:
 
-warning: failed to auto-clean cache data
-
-failed to clean entries from the global cache
-
-Caused by:
-  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
-
-Caused by:
-  Permission denied (os error 13)
 warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
   --> src/lib.rs:60:15
    |

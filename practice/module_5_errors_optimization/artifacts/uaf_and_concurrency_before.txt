@@ -40,16 +40,7 @@ error: test failed, to rerun pass `--test uaf_and_concurrency`
 
 Вывод:
 m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=address" cargo +nightly test --test uaf_and_concurrency --target x86_64-unknown-linux-gnu
-warning: failed to auto-clean cache data
 
-failed to clean entries from the global cache
-
-Caused by:
-  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
-
-Caused by:
-  Permission denied (os error 13)
-   Compiling broken-app v0.1.0 (/home/m_rakul/Code/rust-yandex/practice/module_5_errors_optimization)
 warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
   --> src/lib.rs:84:15
    |
@@ -192,15 +183,7 @@ READ of size 4 at 0x7c1025de4010 thread T2
 
 Вывод:
 m_rakul@NB1729:~/Code/rust-yandex/practice/module_5_errors_optimization$ RUSTFLAGS="-Z sanitizer=thread" cargo +nightly test --test uaf_and_concurrency -Zbuild-std --target x86_64-unknown-linux-gnu
-warning: failed to auto-clean cache data
 
-failed to clean entries from the global cache
-
-Caused by:
-  failed to remove file `/home/m_rakul/.cargo/registry/index/index.crates.io-6f17d22bba15001f/.cache/fs/_e/fs_extra`
-
-Caused by:
-  Permission denied (os error 13)
 warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block
   --> src/lib.rs:85:15
    |

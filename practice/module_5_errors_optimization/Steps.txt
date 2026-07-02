@@ -247,6 +247,53 @@ perf script | inferno-collapse-perf | inferno-flamegraph > flamegraph.svg
 Шаг 1. Начальное состояние:
 Артефакты выложены сюда: artifacts/optimization_initial/
 
+Анализ показывает, что ~98% времени занимает вызов slow_fib чисел Фибоначчи,
+который с рекурсивной реализацией имеет сложность O(2^n) (O(1.618^n, если быть точным)).
+Что с числом 20 приводит к ~20000 вызовов, процент с каждым вызовом падает, что объяснимо: с каждой итерацией ожидание рекурсивных вызовов уменьшается.
+Эту же картину видно по flamegraph.
+
+Вывод:
+               main
+               std::rt::lang_start_internal
+               std::rt::lang_start::{{closure}}
+               std::sys::backtrace::__rust_begin_short_backtrace
+               |          
+                --99.96%--demo::main
+                          |          
+                           --98.72%--broken_app::algo::slow_fib
+                                ...
+
+(!) Здесь произошёл какой-то заскок (у меня система WSL на Windows рабочем, есть специфика):
+бенчмарки broken-app наглухо висли (criterion), reference-app при этом проходили.
+Пробовал много чего: разумеется, cargo clean, другой код в criterion.rs и многое другое.
+
+Поэтому заметка: на этом этапе просто пришлось обновить компилятор, только это помогло.
+Но бенчмарки буду снимать на одной и той же версии компилятора.
+Думаю, картина perf/flamegraph одинакова на обеих версиях.
+
+Привожу на всякий случай - обновился с 1.93 до 1.96.1, nightly так и осталась 1.98.0:
+> rustup update
+...                                                                        
+   stable-x86_64-unknown-linux-gnu updated - rustc 1.96.1 (31fca3adb 2026-06-26) (from rustc 1.93.0 (254b59607 2026-01-19))
+  nightly-x86_64-unknown-linux-gnu updated - rustc 1.98.0-nightly (f46ec5218 2026-06-30) (from rustc 1.98.0-nightly (ce9954c0c 2026-06-26))
+
+info: checking for self-update (current version: 1.29.0)
+info: cleaning up downloads & tmp directories
+m_rakul@NB1729:~/Code/rust-yandex/theory/module_5_debug_profiling/topic_2_optimization/lesson_2_optimization_stages/criterion-example$ 
+
+С обновлением устранил warning'и из-за кривоватой до этого установки вида:
+"warning: failed to auto-clean cache data
+failed to clean entries from the global cache
+..."
+
+Я удалю их из вывода логов (к делу не относятся, теперь всё чисто).
+()
+
+
+TODO:
+Бенчмарк slow_fib (использую criterion.rs, baseline.rs не использую, поменял в Cargo.toml):
+>
+
 
 
 TODO:
@@ -257,7 +304,7 @@ TODO:
 - Бенчмарк Фибоначчи
 
 - Артефакты optimization_step_1
-- Наверх должна выплыть dedup с O(n^2)
+- Наверх (или примерно одинаково) должна выплыть dedup с O(n^2)
 - Бенчмарк дедуплицирования, slow_dedup
 - Правка slow_dedup
 - Бенчмарк slow_dedup
